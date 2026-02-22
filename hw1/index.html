@@ -41,7 +41,6 @@
 
 		<figure>
 			<img src="lion.jpg" alt="Lion" style="width:50%"/>
-			<figcaption>You can add images with captions!</figcaption>
 		</figure>
 
 		<!--
@@ -49,8 +48,9 @@
 		-->
 
 		<h2>Overview</h2>
-		Give a high-level overview of what you implemented in this homework. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the homework.
+		In this homework, I implemented a software rasterizer from scratch. It handles drawing single-color triangles, smooth barycentric color interpolation, and texture mapping. I also added supersampling for geometric anti-aliasing, and implemented bilinear pixel filtering and mipmap level sampling to fix texture aliasing.
 
+		The most interesting part for me was seeing how signal processing concepts actually work in practice. It was cool to see how simply averaging subpixel samples (acting as a low-pass filter) or pre-computing mipmaps can completely eliminate nasty visual bugs like Moiré patterns and jaggies.
 		<h2>Task 1: Drawing Single-Color Triangles</h2>
 		<p>
 		For triangle rasterization, I first compute an axis-aligned bounding box of the triangle in screen space and clamp it to the framebuffer.
@@ -66,7 +66,7 @@
 
 		<figure>
 		<figcaption>
-			<b>basic/test4.svg</b> rendered with default view. The pixel inspector is placed near an edge where coverage changes quickly.
+		<b>basic/test4.svg</b> rendered with default view. This confirms my edge-function test fills the correct pixels inside the triangle boundaries.
 		</figcaption>
 		<img src="images/task1/rasterize.png" style="width: 70%;">
 		</figure>
@@ -106,6 +106,10 @@
 		</p>
 
 		<p>
+		<b>Why it works:</b> From a signal processing perspective, sharp triangle boundaries are high-frequency signals. Point sampling at a standard resolution falls below the Nyquist rate, causing aliasing (jaggies). Supersampling acts as a box low-pass filter: by taking multiple subpixel samples and averaging them down, we filter out frequencies higher than the pixel grid can represent, smoothing out the harsh geometric transitions.
+		</p>
+
+		<p>
 		The sampling pattern is a uniform grid inside each pixel.
 		Let <code>n = sqrt(sample_rate)</code>. For each output pixel <code>(x, y)</code>, I sample at <code>n × n</code> locations:
 		<code>(x + (i+0.5)/n, y + (j+0.5)/n)</code>.
@@ -130,8 +134,10 @@
 
 		<figure>
 		<figcaption>
-			<b>test4.svg</b> comparison at sample rates 1, 4, and 16 (same view and pixel inspector location). As sample_rate increases, the
-			edge transitions become smoother because coverage is estimated with more subpixel samples, at the cost of more work per pixel.
+		<b>test4.svg</b> comparison at sample rates 1, 4, and 16 (same view).
+		At <code>sample_rate = 1</code>, the triangle edges look like hard stair-steps because each pixel is fully on/off.
+		At <code>sample_rate = 4</code>, edge pixels start showing intermediate coverage (some subsamples covered, some not), so the transition looks less jumpy.
+		At <code>sample_rate = 16</code>, the zoomed region shows a much smoother coverage gradient, and thin features (like the slanted red line) look more stable.
 		</figcaption>
 		<div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 12px;">
 			<div style="text-align:center;">
@@ -223,9 +229,10 @@
 
 		<figure>
 		<figcaption>
-			Comparison on a textured SVG from <code>svg/texmap/</code>. I used the pixel inspector to choose a high-frequency region (thin grid lines).
-			It is easy to see that bilinear sampling preserves the texture pattern more cleanly, while nearest sampling produces more blocky/steppy artifacts.
-			The difference is especially obvious at low sample rate (1 sample per pixel). (All screenshots saved with the <code>S</code> hotkey.)
+		Comparison on a textured SVG (same view and inspector region).
+		I intentionally picked a high-frequency area (thin curved strokes / small text in the ring) because that is where nearest sampling looks worst.
+		With nearest + 1 spp, edges and strokes break into big square steps; bilinear + 1 spp keeps the shapes connected by smoothing across texel boundaries.
+		At 16 spp the gap shrinks, but bilinear is still noticeably less blocky in the zoomed view.
 		</figcaption>
 
 		<div style="display: flex; flex-direction: column; align-items: center;">
@@ -337,15 +344,7 @@
 			</table>
 		</figure>
 
-		<ul>
-			<li>You can also add code if you'd like as so: <code>code code code</code></li>
-			<li>If you'd like to add math equations, 
-				<ul>
-					<li>You can write inline equations like so: \( a^2 + b^2 = c^2 \)</li>
-					<li>You can write display equations like so: \[ a^2 + b^2 = c^2 \]</li>
-				</ul>
-			</li>
-		</ul>
+		
 		</div>
 	</body>
 </html>
