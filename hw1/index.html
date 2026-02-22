@@ -52,17 +52,20 @@
 
 		The most interesting part for me was seeing how signal processing concepts actually work in practice. It was cool to see how simply averaging subpixel samples (acting as a low-pass filter) or pre-computing mipmaps can completely eliminate nasty visual bugs like Moiré patterns and jaggies.
 		<h2>Task 1: Drawing Single-Color Triangles</h2>
+
 		<p>
-		First, please note that my code for Task 1 is in <code>src/rasterizer__Task1.cpp</code>. 
+		First, please note that my code for Task 1 is in <code>src/rasterizer__Task1.cpp</code>.
 		For triangle rasterization, I first compute an axis-aligned bounding box of the triangle in screen space and clamp it to the framebuffer.
 		Then, for each pixel inside that box, I test the pixel center at <code>(x+0.5, y+0.5)</code> using edge functions (signed cross products).
 		If the three edge tests are all non-negative or all non-positive, the sample is inside the triangle (including boundaries), so I call
-		<code>fill_pixel(x, y, color)</code>. This also works for both clockwise and counter-clockwise vertex order (tested with <code>test6.svg</code>).
+		<code>fill_pixel(x, y, color)</code>. This also works for both clockwise and counter-clockwise vertex order.
 		</p>
 
 		<p>
-		This algorithm is no worse than checking every sample in the bounding box, because it does exactly that: it only iterates over pixels within
-		the smallest bounding rectangle that contains the triangle, and performs a constant amount of work per pixel.
+		A naive approach would be to test every pixel on the entire framebuffer for every triangle.
+		By restricting work to the triangle's bounding box, in many cases it skips a large fraction of pixels outside the bounding box.
+		Within the bounding box, the method performs a constant amount of work per pixel (three edge function evaluations),
+		so the runtime is proportional to the bounding box area.
 		</p>
 
 		<figure>
@@ -74,25 +77,28 @@
 
 		<h3>Extra Credit: Faster rasterization (scanline)</h3>
 		<p>
-		As an optimization, I implemented a scanline fill version. You can find in my file rasterizer__Task1.cpp. For each row <code>y</code>, I compute the two intersections between the triangle
-		edges and the horizontal line at <code>y+0.5</code>, then fill all pixels between the left and right intersection in that row.
-		This reduces the number of point-in-triangle tests and writes contiguous spans of pixels.
+		As an optimization, I also implemented a scanline span-fill version in <code>src/rasterizer__Task1.cpp</code>.
+		I switch between the bounding-box method and the scanline method using the compile-time flag <code>USE_SCANLINE_FAST</code>.
+		For each scanline row <code>y</code>, I compute the intersections between the triangle edges and the horizontal line at <code>y+0.5</code>,
+		take the leftmost and rightmost intersection, and then fill all pixels whose centers lie between them.
+		This avoids doing an inside-test for every pixel in the bounding box and instead writes contiguous spans of pixels.
 		</p>
 
 		<table style="width: 100%; text-align: center; border-collapse: collapse;">
 		<tr>
-			<th style="border-bottom: 1px solid #ccc; padding: 8px;">Method</th>
-			<th style="border-bottom: 1px solid #ccc; padding: 8px;">Avg svg.draw time (ms, 60 redraws)</th>
+		<th style="border-bottom: 1px solid #ccc; padding: 8px;">Method</th>
+		<th style="border-bottom: 1px solid #ccc; padding: 8px;">Avg svg.draw time (ms, 60 redraws)</th>
 		</tr>
 		<tr>
-			<td style="padding: 8px;">Bounding box + edge tests</td>
-			<td style="padding: 8px;">0.272</td>
+		<td style="padding: 8px;">Bounding box + edge tests</td>
+		<td style="padding: 8px;">0.272</td>
 		</tr>
 		<tr>
-			<td style="padding: 8px;">Scanline span fill</td>
-			<td style="padding: 8px;">0.078</td>
+		<td style="padding: 8px;">Scanline span fill</td>
+		<td style="padding: 8px;">0.078</td>
 		</tr>
 		</table>
+
 		<p>
 		Timing was measured in <code>DrawRend::redraw()</code> by wrapping <code>svg.draw(...)</code> with a high-resolution clock and printing the average
 		over 60 redraws. Both measurements used the same SVG file and view settings.
@@ -101,6 +107,8 @@
 		
 		<h2>Task 2: Antialiasing by Supersampling</h2>
 		<p>
+		Tasks 2 to 6 are implemented in my main rasterizer implementation (the supersampling version), while Task 1 baseline code is in src/rasterizer__Task1.cpp.
+
 		For supersampling antialiasing, I changed the rasterizer so that it no longer writes one color per pixel directly to the final RGB framebuffer.
 		Instead, I store <code>sample_rate</code> subpixel samples per pixel in a separate <code>sample_buffer</code> and only convert to the final
 		framebuffer at the end by averaging.
@@ -278,9 +286,10 @@
 
 		<p>
 		Implementation overview:
-		In <code>RasterizerImp::rasterize_textured_triangle(...)</code>, for each sample point I compute UV at <code>(x, y)</code>, <code>(x+1, y)</code>,
-		and <code>(x, y+1)</code> using barycentric interpolation, store them as <code>sp.p_uv</code>, <code>sp.p_dx_uv</code>, <code>sp.p_dy_uv</code>,
-		and pass a <code>SampleParams sp</code> (with <code>psm</code> and <code>lsm</code>) into <code>Texture::sample(sp)</code>.
+		In <code>RasterizerImp::rasterize_textured_triangle(...)</code>, for each sample location <code>(xx, yy)</code> I compute the UV coordinate at
+		<code>(xx, yy)</code>, <code>(xx+1, yy)</code>, and <code>(xx, yy+1)</code> using barycentric interpolation, store them as
+		<code>sp.p_uv</code>, <code>sp.p_dx_uv</code>, <code>sp.p_dy_uv</code>, and pass a <code>SampleParams sp</code> (with <code>psm</code> and <code>lsm</code>)
+		into <code>Texture::sample(sp)</code>.
 		In <code>Texture::get_level</code>, I compute finite differences
 		<code>duv_dx = sp.p_dx_uv - sp.p_uv</code> and <code>duv_dy = sp.p_dy_uv - sp.p_uv</code>, scale them by the base texture
 		width/height to convert to texel units, compute the footprint lengths in x and y, take the larger one, and return
