@@ -65,9 +65,9 @@
 
 		<p>
 		A naive approach would be to test every pixel on the entire framebuffer for every triangle.
-		By restricting work to the triangle's bounding box, in many cases it skips a large fraction of pixels outside the bounding box.
+		By restricting work to the triangle's bounding box, in many cases it skips a large fraction of pixels that are outside the bounding box.
 		Within the bounding box, the method performs a constant amount of work per pixel (three edge function evaluations),
-		so the runtime is proportional to the bounding box area.
+		so the runtime is proportional to the bounding box area.(I implemented a faster scanline method to skip many pixels inside the bounding box, which I will discuss later.)
 		</p>
 
 		<figure>
@@ -240,7 +240,7 @@
 		<figure>
 		<figcaption>
 		Comparison on a textured SVG (same view and inspector region).
-		I intentionally picked a high-frequency area (thin curved strokes / small text in the ring) because that is where nearest sampling looks worst.
+		I intentionally picked a high-frequency area which is the thin curved strokes in the ring, because that is where nearest sampling looks worst.
 		With nearest + 1 spp, edges and strokes break into big square steps; bilinear + 1 spp keeps the shapes connected by smoothing across texel boundaries.
 		At 16 spp the gap shrinks, but bilinear is still noticeably less blocky in the zoomed view.
 		</figcaption>
@@ -308,17 +308,26 @@
 		Tradeoffs (pixel sampling vs level sampling vs sample_rate):
 		</p>
 		<ul>
-			<li>
-			<code>P_NEAREST</code> is fastest but blocky; <code>P_LINEAR</code> is smoother but slightly slower.
-			</li>
-			<li>
-			<code>L_ZERO</code> is simplest but aliases badly under minification; <code>L_NEAREST</code> reduces minification aliasing but can show level transitions;
-			<code>L_LINEAR</code> is most stable but costs more (two mip samples; with <code>P_LINEAR</code> this becomes trilinear filtering).
-			</li>
-			<li>
-			Higher <code>sample_rate</code> improves antialiasing by averaging more subpixel samples (especially triangle edges), but increases runtime and memory
-			roughly proportional to <code>sample_rate</code>.
-			</li>
+		<li>
+			<b>Speed:</b>
+			<code>P_NEAREST</code> is fastest (1 texel lookup per sample);
+			<code>P_LINEAR</code> is slower because it blends 4 neighboring texels.
+			For level sampling, <code>L_ZERO</code> uses one mip level, while <code>L_LINEAR</code> blends two mip levels; with <code>P_LINEAR</code> this becomes trilinear filtering (effectively 8 texel lookups per sample), so it is the slowest in general.
+		</li>
+		<li>
+			<b>Memory usage:</b>
+			Supersampling increases memory the most: my <code>sample_buffer</code> stores <code>width * height * sample_rate</code> colors, so memory grows linearly with <code>sample_rate</code>.
+			Mipmapping increases texture storage by a constant factor: a full mip chain costs
+			<code>1 + 1/4 + 1/16 + ... = 4/3</code> of the base level, i.e. about <code>33%</code> extra texture memory.
+			(Changing <code>lsm</code> changes which mip levels are sampled, but the mip levels still exist once generated.)
+			Pixel sampling (<code>P_NEAREST</code> vs <code>P_LINEAR</code>) does not meaningfully change memory usage.
+		</li>
+		<li>
+			<b>Antialiasing power:</b>
+			Increasing <code>sample_rate</code> mainly reduces geometric aliasing (triangle edges/jaggies) by better estimating coverage.
+			Level sampling mainly reduces texture minification aliasing: <code>L_ZERO</code> shimmers/moire under minification, <code>L_NEAREST</code> is more stable but may show discrete level transitions, and <code>L_LINEAR</code> is most stable (smoothly blends between mip levels).
+			Within a mip level, <code>P_LINEAR</code> further reduces blockiness compared to <code>P_NEAREST</code>.
+		</li>
 		</ul>
 
 		<p>
