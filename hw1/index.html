@@ -50,9 +50,13 @@
 		-->
 
 		<h2>Overview</h2>
-		In this homework, I implemented a software rasterizer from scratch. It handles drawing single-color triangles, smooth barycentric color interpolation, and texture mapping. I also added supersampling for geometric anti-aliasing, and implemented bilinear pixel filtering and mipmap level sampling to fix texture aliasing.
+		<p>
+		In this homework, I implemented a software rasterizer from scratch. I built triangle rasterization using edge tests, added supersampling for antialiasing, implemented barycentric interpolation for smooth vertex colors, and added texture mapping with both nearest/bilinear pixel sampling and mipmap-based level sampling.
+		</p>
+		<p>
+		For me, the biggest takeaway for me was seeing signal processing ideas show up in rendering, getting familiar with the concepts and procedures. Supersampling acts like a low-pass filter on geometry edges, and mipmaps stabilize minified textures by matching the sampling resolution to the pixel footprint, which removes moire and shimmering in practice.
+		</p>
 
-		The most interesting part for me was seeing how signal processing concepts actually work in practice. It was cool to see how simply averaging subpixel samples (acting as a low-pass filter) or pre-computing mipmaps can completely eliminate nasty visual bugs like Moiré patterns and jaggies.
 		<h2>Task 1: Drawing Single-Color Triangles</h2>
 
 		<p>
@@ -65,7 +69,7 @@
 
 		<p>
 		A naive approach would be to test every pixel on the entire framebuffer for every triangle.
-		By restricting work to the triangle's bounding box, in many cases it skips a large fraction of pixels that are outside the bounding box.
+		By restricting work to the triangle's bounding box, it skips a large fraction of pixels that are outside the bounding box.
 		Within the bounding box, the method performs a constant amount of work per pixel (three edge function evaluations),
 		so the runtime is proportional to the bounding box area.(I implemented a faster scanline method to skip many pixels inside the bounding box, which I will discuss later.)
 		</p>
@@ -380,22 +384,24 @@
 		<td style="padding: 8px;">3.8</td>
 		</tr>
 		<tr>
-		<td style="padding: 8px;"><code>P_NEAREST</code> + <code>L_LINEAR</code></td>
+		<td style="padding: 8px;"><code>P_LINEAR</code> + <code>L_ZERO</code></td>
 		<td style="padding: 8px;">4.3</td>
 		</tr>
 		<tr>
-		<td style="padding: 8px;"><code>P_LINEAR</code> + <code>L_ZERO</code></td>
-		<td style="padding: 8px;">4.0</td>
+		<td style="padding: 8px;"><code>P_NEAREST</code> + <code>L_NEAREST</code></td>
+		<td style="padding: 8px;">4.1</td>
 		</tr>
 		<tr>
-		<td style="padding: 8px;"><code>P_LINEAR</code> + <code>L_LINEAR</code></td>
+		<td style="padding: 8px;"><code>P_LINEAR</code> + <code>L_NEAREST</code></td>
 		<td style="padding: 8px;">4.6</td>
 		</tr>
 		</table>
 
 		<p>
 		These timings were measured by printing the average time of <code>svg.draw(...)</code> over 60 redraws.
-		Using <code>L_LINEAR</code> is slower because it blends between two mip levels (and with <code>P_LINEAR</code> it effectively becomes trilinear filtering).
+		In my measurements on the Berkeley seal view, <code>L_NEAREST</code> was slightly slower than <code>L_ZERO</code>.
+		A likely reason is that <code>L_NEAREST</code> adds mip level selection (estimating the pixel footprint in texture space and choosing a mip level) before doing the within-level pixel sampling, while <code>L_ZERO</code> always samples mip level 0.
+		The exact gap depends on the view and texture content, but the overall trend matches the extra work needed for level selection.
 		</p>
 		</div>
 	</body>
