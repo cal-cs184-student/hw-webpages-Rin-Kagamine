@@ -53,6 +53,7 @@
 		The most interesting part for me was seeing how signal processing concepts actually work in practice. It was cool to see how simply averaging subpixel samples (acting as a low-pass filter) or pre-computing mipmaps can completely eliminate nasty visual bugs like Moiré patterns and jaggies.
 		<h2>Task 1: Drawing Single-Color Triangles</h2>
 		<p>
+		First, please note that my code for Task 1 is in <code>src/rasterizer__Task1.cpp</code>. 
 		For triangle rasterization, I first compute an axis-aligned bounding box of the triangle in screen space and clamp it to the framebuffer.
 		Then, for each pixel inside that box, I test the pixel center at <code>(x+0.5, y+0.5)</code> using edge functions (signed cross products).
 		If the three edge tests are all non-negative or all non-positive, the sample is inside the triangle (including boundaries), so I call
@@ -218,8 +219,7 @@
 
 		<p>
 		I implemented the two pixel sampling methods in <code>Texture::sample_nearest</code> and <code>Texture::sample_bilinear</code>, and selected between them
-		based on the GUI toggle <code>psm</code> (key <code>P</code>). Since level sampling is not implemented yet in Task 5, I always sample from mip level 0
-		(full resolution).
+		based on the GUI toggle <code>psm</code> (key <code>P</code>). For the comparisons in this task, I set the GUI <code>lsm</code> to <code>L_ZERO</code> (mip level 0) so that the only change is the pixel sampling method (<code>psm</code>).
 		</p>
 
 		<p>
@@ -343,8 +343,40 @@
 			</tr>
 			</table>
 		</figure>
+		<p>
+		<b>What I observed in these four renders:</b>
+		In the zoomed inspector region, <code>L_ZERO + P_NEAREST</code> looks the most blocky: the boundary becomes staircase-like and small details snap between texels.
+		Switching to <code>L_ZERO + P_LINEAR</code> makes the transition smoother (less abrupt texel jumps), but the minified region still looks unstable because it is still sampling from mip level 0.
+		With <code>L_NEAREST</code>, the renderer chooses a lower-resolution mip level that better matches the pixel footprint, so the zoomed region becomes noticeably more stable and the aliasing is reduced.
+		Finally, <code>L_NEAREST + P_LINEAR</code> is the smoothest in my tests: it keeps transitions soft and reduces remaining discontinuities, at the cost of slightly more blur in fine details.
+		</p>
+		<table style="width: 100%; text-align: center; border-collapse: collapse; margin-top: 12px;">
+		<tr>
+		<th style="border-bottom: 1px solid #ccc; padding: 8px;">Setting (Berkeley seal)</th>
+		<th style="border-bottom: 1px solid #ccc; padding: 8px;">Avg svg.draw time (ms, 60 redraws)</th>
+		</tr>
+		<tr>
+		<td style="padding: 8px;"><code>P_NEAREST</code> + <code>L_ZERO</code></td>
+		<td style="padding: 8px;">3.8</td>
+		</tr>
+		<tr>
+		<td style="padding: 8px;"><code>P_NEAREST</code> + <code>L_LINEAR</code></td>
+		<td style="padding: 8px;">4.3</td>
+		</tr>
+		<tr>
+		<td style="padding: 8px;"><code>P_LINEAR</code> + <code>L_ZERO</code></td>
+		<td style="padding: 8px;">4.0</td>
+		</tr>
+		<tr>
+		<td style="padding: 8px;"><code>P_LINEAR</code> + <code>L_LINEAR</code></td>
+		<td style="padding: 8px;">4.6</td>
+		</tr>
+		</table>
 
-		
+		<p>
+		These timings were measured by printing the average time of <code>svg.draw(...)</code> over 60 redraws.
+		Using <code>L_LINEAR</code> is slower because it blends between two mip levels (and with <code>P_LINEAR</code> it effectively becomes trilinear filtering).
+		</p>
 		</div>
 	</body>
 </html>
