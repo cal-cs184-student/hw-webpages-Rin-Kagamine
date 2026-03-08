@@ -325,13 +325,7 @@
 		For the extra credit portion, I also implemented support for splitting boundary edges. In this case, only the
 		non-boundary triangle adjacent to the selected edge is split into two triangles, while the corresponding segment
 		on the virtual boundary face is also divided into two boundary edges. This required updating both the local
-		interior face connectivity and the boundary loop connectivity consistently.
-		</p>
-
-		<p>
-		One thing I learned while testing is that an edge can lie very close to the mesh boundary, or even connect
-		boundary vertices, without itself being a boundary edge. The most reliable way to distinguish the two cases was
-		to inspect the edge data directly through <code>isBoundary()</code> in the GUI.
+		interior face connectivity and the boundary loop connectivity consistently. Use isBoundary() to check if an edge is a boundary edge.
 		</p>
 
 		<div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
