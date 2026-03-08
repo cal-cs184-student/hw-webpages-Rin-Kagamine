@@ -278,7 +278,7 @@
 		My debugging process for this part was much smoother than I initially expected, mainly because I worked out the full
 		pointer update on paper before implementing it. The most useful “debugging trick” was therefore not a special tool,
 		but careful local bookkeeping: drawing the post-split face cycles and checking each halfedge’s
-		<code>next</code>, <code>twin</code>, <code>vertex</code>, <code>edge</code>, and <code>face</code> assignment one by one.
+		<code>next</code>, <code>twin</code>, <code>vertex</code>, <code>edge</code>, and <code>face</code> assignment one by one. However, I did draw this diagram 3 times because of the orientation problem.
 		</p>
 
 		<figure>
@@ -319,7 +319,7 @@
 		checking whether a selected edge was actually on the boundary, since an edge can lie close to the boundary or even
 		connect boundary vertices without itself being a boundary edge.
 		</p>
-
+		<h3>extra credit 1</h3>
 		<p>
 		For the extra credit portion, I also implemented support for splitting boundary edges. In this case, only the
 		non-boundary triangle adjacent to the selected edge is split into two triangles, while the corresponding segment
@@ -371,7 +371,10 @@
 		the most noticeably: its silhouette became much smoother and more rounded. This makes sense because Loop
 		subdivision repeatedly averages nearby vertex positions, so sharp local features are gradually smoothed out.
 		</p>
-
+		<p>
+		This smoothing effect can be reduced to some extent by pre-splitting edges near a sharp feature. Doing so makes the local triangulation more regular and gives the subdivision process more geometric support around the feature, 
+		which can help preserve its visual structure a little better. And you can add some non-symmetry parts. However, Loop subdivision is still inherently a smoothing scheme, so pre-splitting only mitigates the loss of sharpness rather than fully preserving a perfectly sharp edge.
+		</p>
 		<div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
 		<figure>
 			<img src="images/part6_sharp_before.png" alt="Teapot before subdivision" style="width:380px"/>
@@ -381,6 +384,10 @@
 		<figure>
 			<img src="images/part6_sharp_after.png" alt="Teapot after subdivision" style="width:380px"/>
 			<figcaption>Teapot after Loop subdivision. The lid becomes noticeably smoother.</figcaption>
+		</figure>
+		<figure>
+			<img src="images/part6_sharp_after2.png" alt="Teapot after subdivision" style="width:380px"/>
+			<figcaption>Teapot doing pre-splitting, then Loop subdivision. The lid becomes less smoother.</figcaption>
 		</figure>
 		</div>
 
@@ -421,7 +428,7 @@
 			<figcaption>The preprocessed cube after Loop subdivision, with a more symmetric result.</figcaption>
 		</figure>
 		</div>
-
+		<h3>extra credit 2</h3>
 		<p>
 		For the extra credit extension, I also supported meshes with boundary. For old boundary vertices, I used the
 		boundary rule \( \frac{3}{4}v + \frac{1}{8}v_{\mathrm{prev}} + \frac{1}{8}v_{\mathrm{next}} \), and for new
@@ -440,20 +447,45 @@
 			<figcaption>The same mesh after boundary-aware Loop subdivision.</figcaption>
 		</figure>
 		</div>
-	
-		<h2>(Optional) Section III: Potential Extra Credit - Art Competition: Model something Creative</h2>
-		Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+		<h3>extra credit 3</h3>
+		<p>
+		For an additional subdivision extra credit, I also implemented \(\sqrt{3}\)-subdivision for closed triangle meshes. Unlike Loop subdivision, which performs a 4-1 split by inserting edge midpoints, this scheme inserts one new vertex at the center of each face and then rebuilds the mesh connectivity from those face-center vertices.
+		</p>
 
-		<h2>Additional Notes (please remove)</h2>
-		<ul>
-			<li>You can also add code if you'd like as so: <code>code code code</code></li>
-			<li>If you'd like to add math equations, 
-				<ul>
-					<li>You can write inline equations like so: \( a^2 + b^2 = c^2 \)</li>
-					<li>You can write display equations like so: \[ a^2 + b^2 = c^2 \]</li>
-				</ul>
-			</li>
-		</ul>
+		<p>
+		In my implementation, I first computed the updated positions of all original vertices using the \(\sqrt{3}\)-subdivision weight
+		\[
+		\alpha_n = \frac{4 - 2\cos(2\pi/n)}{9},
+		\]
+		where \(n\) is the degree of the old vertex. Each old vertex was updated as a weighted average of its original position and its one-ring neighbors. Then, for every triangle face, I inserted one new vertex at the triangle center. Finally, instead of performing local split and flip operations, I rebuilt the refined mesh globally: for each old vertex, I traversed its incident faces in order and connected that old vertex to the centers of consecutive neighboring faces, producing the new triangulation.
+		</p>
+
+		<p>
+		The main debugging issue in this part was triangle orientation. In my first implementation, the order of the face-center vertices around each old vertex was reversed, so after one subdivision the mesh normals flipped and the surface appeared dark. After swapping the order of the two consecutive face centers when constructing each new triangle, the orientation became consistent and repeated subdivision behaved correctly.
+		</p>
+
+		<div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
+			<figure>
+				<img src="images/part6_sqrt3_iter0.png" alt="Original mesh for sqrt3 subdivision" style="width:320px"/>
+				<figcaption>Original mesh before \(\sqrt{3}\)-subdivision.</figcaption>
+			</figure>
+
+			<figure>
+				<img src="images/part6_sqrt3_iter1.png" alt="Mesh after one sqrt3 subdivision" style="width:320px"/>
+				<figcaption>Mesh after one round of \(\sqrt{3}\)-subdivision.</figcaption>
+			</figure>
+
+			<figure>
+				<img src="images/part6_sqrt3_iter2.png" alt="Mesh after two sqrt3 subdivisions" style="width:320px"/>
+				<figcaption>Mesh after two rounds of \(\sqrt{3}\)-subdivision.</figcaption>
+			</figure>
+		</div>
+
+		<p>
+		Compared with Loop subdivision, this scheme produces a different refinement pattern because it inserts one face-center vertex per triangle and rebuilds the mesh globally from those centers. It was a useful extra exercise because it made me think more carefully about mesh orientation and about the difference between local half-edge updates and rebuilding connectivity from a higher-level polygon list.
+		</p>
+		<h2>(Optional) Section III: Potential Extra Credit - Art Competition: Model something Creative</h2>
+
 		</div>
 	</body>
 </html>
