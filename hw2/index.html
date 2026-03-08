@@ -352,7 +352,30 @@
 		I did this before changing the mesh connectivity, since all subdivision weights should be computed from the coarse
 		mesh rather than from an already subdivided one.
 		</p>
+		For every <i>original</i> edge with endpoints \(A,B\) and opposite vertices \(C,D\) (from the two adjacent triangles),
+		the new vertex inserted on this edge uses the standard Loop edge rule:
+		\[
+		\mathbf{e}_{new} = \frac{3}{8}(\mathbf{A}+\mathbf{B}) + \frac{1}{8}(\mathbf{C}+\mathbf{D}).
+		\]
+		</p>
 
+		<p>
+		For every <i>original</i> vertex \(v\) with degree \(n\) (i.e., \(n\) one-ring neighbors \(v_i\)),
+		the updated position is a weighted average of itself and its one-ring neighbors:
+		\[
+		\mathbf{v}_{new} = (1-n\beta)\mathbf{v} + \beta\sum_{i=1}^{n}\mathbf{v}_i,
+		\]
+		where
+		\[
+		\beta =
+		\begin{cases}
+		\frac{3}{16}, & n=3,\\[4pt]
+		\frac{3}{8n}, & n>3.
+		\end{cases}
+		\]
+		I stored these target positions in <code>Vertex::newPosition</code> and <code>Edge::newPosition</code> before any connectivity changes,
+		so all weights are computed from the coarse mesh rather than from a partially subdivided mesh.
+		</p>
 		<p>
 		Next, I subdivided the mesh topologically by splitting every original edge, marking new and old elements with
 		<code>isNew</code>, and then flipping every new non-boundary edge that connected one old vertex and one new vertex.
