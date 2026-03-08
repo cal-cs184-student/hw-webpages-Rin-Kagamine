@@ -354,6 +354,7 @@
 		I did this before changing the mesh connectivity, since all subdivision weights should be computed from the coarse
 		mesh rather than from an already subdivided one.
 		</p>
+		<p>
 		For every <i>original</i> edge with endpoints \(A,B\) and opposite vertices \(C,D\) (from the two adjacent triangles),
 		the new vertex inserted on this edge uses the standard Loop edge rule:
 		\[
@@ -510,22 +511,27 @@
 			<p>
 			Compared with Loop subdivision, this scheme produces a different refinement pattern because it inserts one face-center vertex per triangle and rebuilds the mesh globally from those centers. It was a useful extra exercise because it made me think more carefully about mesh orientation and about the difference between local half-edge updates and rebuilding connectivity from a higher-level polygon list.
 			</p>
-			<h2>Section III: Potential Extra Credit - Art Competition: Model something Creative</h2>
-			<p>
-			I tried to make a Kagamine Rin-inspired mesh, although the overall result is only moderate. It is at ./docs/art_competition_patched.dae. The first image shows the front view of the face, and the second image shows the signature bow-knot.
-			</p>
+		<h2>Section III: Potential Extra Credit - Art Competition: Model something Creative</h2>
+		<p>
+		I tried to make a Kagamine Rin-inspired mesh, although the overall result is only moderate. The three images below show the original mesh, the mesh after one round of loop subdivision, and the mesh after two rounds of subdivision. After subdivision, the model becomes less sharp and noticeably smoother, and the overall silhouette looks softer and more rounded.
+		</p>
 
-			<div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
-				<figure>
-					<img src="images/artcompetition_rin_face.png" alt="Kagamine Rin inspired mesh front view" style="width:380px"/>
-					<figcaption>Front view of the Kagamine Rin-inspired mesh.</figcaption>
-				</figure>
+		<div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
+			<figure>
+				<img src="images/artcompetition_rin_face.png" alt="Original Kagamine Rin inspired mesh" style="width:320px"/>
+				<figcaption>Original Kagamine Rin-inspired mesh.</figcaption>
+			</figure>
 
-				<figure>
-					<img src="images/artcompetition_rin_bow.png" alt="Kagamine Rin inspired mesh bow" style="width:380px"/>
-					<figcaption>The signature bow-knot of the Kagamine Rin-inspired mesh.</figcaption>
-				</figure>
-			</div>
+			<figure>
+				<img src="images/artcompetition_rin_sub1.png" alt="Kagamine Rin inspired mesh after one sqrt3 subdivision" style="width:320px"/>
+				<figcaption>After one round of subdivision.</figcaption>
+			</figure>
+
+			<figure>
+				<img src="images/artcompetition_rin_sub2.png" alt="Kagamine Rin inspired mesh after two sqrt3 subdivisions" style="width:320px"/>
+				<figcaption>After two rounds of subdivision.</figcaption>
+			</figure>
+		</div>
 		</div>
 	</body>
 </html>
