@@ -28,42 +28,45 @@
 	<body>
 		<div class="container">
 		<h1>CS184/284A Spring 2026 Homework 2 Write-Up</h1>
-		<div style="text-align: center;">Names: </div>
+		<div style="text-align: center;">Names: Xuhuan Shen</div>
 
-		<br>
-
-		Link to webpage: (TODO) <a href="https://cs184.eecs.berkeley.edu/sp26">cs184.eecs.berkeley.edu/sp26</a>
-
-		<br>
-		
-		Link to GitHub repository: (TODO) <a href="https://cs184.eecs.berkeley.edu/sp26">cs184.eecs.berkeley.edu/sp26</a>
-
-		<figure>
-			<img src="images/teapot.png" alt="Teapot" style="width:50%"/>
-			<figcaption>You can add images with captions!</figcaption>
-		</figure>
-
-		<!--
-		We've already added one heading per part, to make your write-up as navigable when grading. Please fit your write-up within these sections!
-		-->
+		<p>
+		Link to webpage:
+		https://cal-cs184-student.github.io/hw-webpages-Rin-Kagamine/hw2/
+		</p>
+		<p>
+		Link to GitHub website repository:
+		https://github.com/cal-cs184-student/hw-webpages-Rin-Kagamine
+		</p>
+		<p>
+		Link to GitHub code repository:
+		https://github.com/cal-cs184-student/hw2-meshedit-oliveira2
+		</p>
 
 		<h2>Overview</h2>
-		Give a high-level overview of what you implemented in this homework. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the homework.
+		<p>
+		In this homework, I implemented both Bezier curve / surface evaluation and several local mesh editing operations on triangle meshes. On the Bezier side, I used de Casteljau subdivision to evaluate curves and surfaces. On the mesh side, I implemented area-weighted vertex normals, edge flip, edge split, and Loop subdivision using the half-edge data structure.
+		</p>
 
+		<p>
+		My main takeaway from this homework is that I now have a much more concrete understanding of geometry processing through implementation rather than just through lecture diagrams. In particular, I became much more comfortable working with the half-edge data structure: after repeatedly tracing <code>next()</code>, <code>twin()</code>, and the local face/vertex neighborhoods, the connectivity of a mesh feels much less abstract than before.
+		</p>
+
+		<p>
+		Another thing that became very clear to me is that these local mesh operations are different on the surface, but in practice they follow a very similar pattern. Whether it is flipping an edge, splitting an edge, or thinking ahead to something like edge collapse, the real work is always to identify the local neighborhood carefully and then update the connectivity in a consistent way. After doing this homework, I feel that I have a much better sense of how these operations are actually carried out.
+		</p>
 		<h2>Section I: Bezier Curves and Surfaces</h2>
 
 		<h3>Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
 		<p>
-		A Bezier curve can be defined in an explicit polynomial form using Bernstein basis functions.
-		For a degree-\(n\) curve with control points \(P_0, P_1, \dots, P_n\), the curve can be written as
+		A Bezier curve can be defined in an explicit polynomial, I show it in my notes.
 		</p>
 
-		<p style="text-align: center;">
-		\[
-		B(t)=\sum_{i=0}^{n} \binom{n}{i}(1-t)^{n-i}t^i P_i, \qquad t\in[0,1].
-		\]
-		</p>
-
+		<figure>
+		<img src="images/part1_explicit_formula_note.png" alt="Bezier explicit formula note" style="width:60%"/>
+		<figcaption>My note on the explicit polynomial definition of a Bezier curve.</figcaption>
+		</figure>
+	
 		<p>
 		However, in this assignment I evaluated the curve using de Casteljau’s algorithm instead of directly using
 		the explicit formula. The main idea of de Casteljau’s algorithm is to repeatedly linearly interpolate between
@@ -81,17 +84,6 @@
 		I used this process to verify that the intermediate points moved correctly and that the final evaluated point
 		stayed on the curve.
 		</p>
-
-		<p>
-		The figure below shows my note about the explicit definition of a Bezier curve. Although this closed-form view
-		is useful conceptually, the implementation in this homework uses the recursive subdivision viewpoint because it
-		is more geometric and naturally exposes all intermediate construction steps.
-		</p>
-
-		<figure>
-		<img src="images/part1_explicit_formula_note.png" alt="Bezier explicit formula note" style="width:60%"/>
-		<figcaption>My note on the explicit polynomial definition of a Bezier curve.</figcaption>
-		</figure>
 
 		<p>
 		For the screenshots below, I created my own Bezier curve with 6 control points and stepped through the full
