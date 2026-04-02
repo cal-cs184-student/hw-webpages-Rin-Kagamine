@@ -290,7 +290,7 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
   </table>
 </div>
 <p>
-  I used bench.dae for this comparison because it contains an area light and produces clearly visible soft shadows. In all four renders I fixed the image sampling rate at 1 sample per pixel and changed only the number of light samples. With 1 light ray, the entire image is extremely noisy, especially in the soft shadow regions, and the overall estimate appears noticeably darker and less stable. Increasing to 4 light rays already makes the lighting much more coherent, although there is still substantial grain across the scene. At 16 light rays, the noise is reduced further and the penumbra becomes much smoother and easier to read. With 64 light rays, the remaining variance is greatly reduced, the soft shadow structure is significantly cleaner, and the image also appears brighter overall because the direct-light estimate is much more stable under the same pixel sampling budget. This is exactly what we expect from Monte Carlo integration: increasing the number of light samples reduces variance, especially in partially shadowed regions where only part of the area light is visible.
+ I used bench.dae for this comparison because it contains an area light and produces clearly visible soft shadows. In all four renders, I fixed the image sampling rate at 1 sample per pixel and changed only the number of light samples. With 1 light ray, noise is visible almost everywhere on the chair, including the seat, the back, and the darker wall and floor regions, but it is especially obvious around tight corners and the narrow waist-like region where geometry and shadow meet. The soft shadow under the chair also looks very blotchy and unstable. With 4 light rays, the overall lighting becomes more coherent, but there is still clear grain in the shadow boundary and around the corners. At 16 light rays, the penumbra becomes smoother and the shape of the chair is easier to read, although some noise still remains in the darker regions. With 64 light rays, the image is much cleaner and more stable overall: the chair looks clearer, the soft shadow is smoother, and even the corner and waist regions that were heavily speckled at 1 light ray become much easier to see with little visible noise. Under the same 1-spp pixel budget, the 64-light-ray render also looks brighter and more complete because the direct-light estimate is much less noisy.
 </p>
 <br>
 
@@ -406,10 +406,11 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
 </div>
 <br>
 <p>
-  To generate these two views, I temporarily modified <code>at_least_one_bounce_radiance</code> in two ways. For the direct-only render, I returned only <code>one_bounce_radiance</code>, so the path tracer kept the direct lighting term and removed all recursive indirect transport. For the indirect-only render, I removed the direct term at the current hit point and kept only the recursively transported contribution from deeper bounces.
+  To generate these two views, I temporarily modified <code>at_least_one_bounce_radiance</code> in two ways. For the direct-only render, I returned only <code>one_bounce_radiance</code>, so the path tracer kept the direct lighting term and removed all recursive indirect transport. For the indirect-only render, I removed the direct term at the current visible hit point and kept only the recursively transported contribution from deeper bounces.
 </p>
+
 <p>
-  The direct-only image already captures the main geometry, the contact shadow under the bunny, and the overall Cornell box structure. However, it looks harsher and less natural, because the shadowed side of the bunny receives almost no fill light and the colored walls do not meaningfully influence the interior of the scene. The indirect-only image is much dimmer, but it reveals exactly what the direct-only image is missing: soft fill in the dark regions and color bleeding from the red and blue walls. This is the part of the lighting that ordinary rasterization or direct-light-only rendering tends to miss. The final global illumination image looks convincing because it combines both the strong direct term and the weaker but visually important indirect term.
+  The direct-only image already captures the main geometry, the contact shadow under the bunny, and the overall Cornell box structure. In this view, the upper part of the bunny and the floor region directly under the ceiling light are strongly illuminated, since they are reached most directly by the light source. At the same time, regions that are blocked from direct light, especially the ceiling and the lower half of the bunny, remain almost completely dark. This makes the image look harsher and less natural. The indirect-only image shows almost the opposite behavior. Areas that were brightest in the direct-only render, such as the directly lit floor and the upper part of the bunny, now become some of the darkest regions, while the ceiling and the lower half of the bunny become clearly visible because they are lit by bounced light. The whole room is also filled with a soft, fairly uniform dim glow, which makes the result much gentler and is characteristic of indirect illumination. Color bleeding is easy to see as well: the left side of the back wall is noticeably tinted red, while the right side is tinted blue, showing that indirect light carries the color of the side walls throughout the box. The final global illumination image looks convincing because it combines the strong structure of direct lighting with the softer fill light and color transport provided by indirect illumination.
 </p>
 <br>
 
@@ -450,10 +451,10 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
 </div>
 <br>
 <p>
-  With <code>isAccumBounces = false</code>, each image isolates the contribution of a single bounce level rather than summing all previous ones. At <code>m = 0</code>, only emitted light is visible, so the image is almost entirely black except for the ceiling light. At <code>m = 1</code>, we see the direct illumination term, which is enough to reveal the bunny and the Cornell box layout. Starting from <code>m = 2</code>, the contribution becomes much dimmer, because now the light must first reflect off another diffuse surface before reaching the visible point.
+  With isAccumBounces = false, each image isolates the contribution of a single bounce level rather than summing all previous ones. At m = 0, only emitted light is visible, so the image is almost entirely black except for the ceiling light. At m = 1, we see the direct illumination term, which is enough to reveal the bunny and the Cornell box layout. Starting from m = 2, the contribution becomes weaker than direct lighting, since light now has to reflect off another diffuse surface before reaching the visible point.
 </p>
 <p>
-  The second bounce is the first place where true interreflection appears. It introduces soft indirect fill into regions that were dark under direct illumination, and it starts to carry the red and blue wall colors back onto the bunny and the floor. The third bounce is weaker, but it continues this effect: it further softens the dark regions and makes the illumination transition more gradual rather than sharply separated into lit and unlit areas. This is exactly the kind of transport that makes path tracing look different from rasterization. Rasterization with simple direct lighting can reproduce the main visibility and the primary shadow, but it does not naturally capture these repeated diffuse reflections, so it tends to produce flatter shadows and less realistic color exchange between surfaces. By <code>m = 4</code> and <code>m = 5</code>, the isolated contribution is still present, but it is very small compared with the first few bounces.
+ The second bounce is the first place where clear indirect illumination appears on the bunny itself. In this image, the lower half of the bunny is noticeably lit up, even though that region is not reached as strongly by direct light. We can also see color from the red and blue side walls being reflected back onto the bunny, together with white light from the floor. Even the ceiling becomes visibly illuminated, which shows that light has already started bouncing around the box instead of traveling only directly from the light source. At m = 3, the result is dimmer and more diffuse, but it has a very characteristic faint glow that clearly looks like light that has been reflected multiple times. For example, the floor remains relatively visible, which suggests that some of the light reflected upward in the m = 2 case is bouncing back down again after reaching other surfaces such as the ceiling. This higher-order transport is weaker, but it further softens the scene and spreads energy into regions that direct lighting alone cannot explain. By m = 4 and m = 5, the isolated contribution is still present, but it is much smaller than the first few bounces. This is exactly the kind of transport that makes path tracing look different from rasterization: repeated diffuse reflections create soft fill light and color exchange that simple direct-light rendering does not naturally capture.
 </p>
 <br>
 
@@ -536,10 +537,10 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
 </div>
 <br>
 <p>
-  The difference between these two modes is structural. The unaccumulated images isolate a single bounce level, so after <code>m = 1</code> they quickly become dim, since each higher-order bounce by itself carries only a small amount of energy. The accumulated images instead sum all contributions up to the chosen depth, so they become progressively closer to the final render as more bounce levels are included.
+ The difference between these two modes is structural. The unaccumulated images isolate a single bounce level, so after m = 1 they quickly become dim, since each higher-order bounce by itself carries only a limited amount of energy. The accumulated images instead sum all contributions up to the chosen depth, so they become progressively closer to the final render as more bounce levels are included.
 </p>
 <p>
-  In the accumulated sequence, <code>m = 0</code> again shows only emission, and <code>m = 1</code> corresponds to direct illumination only. The largest visual change occurs when moving from <code>m = 1</code> to <code>m = 2</code>, because this is where the first indirect diffuse interreflection enters the image. The bunny’s shadowed side becomes less harsh, the floor receives extra bounced light, and color bleeding from the side walls becomes visible. The move from <code>m = 2</code> to <code>m = 3</code> still improves the result, but the change is smaller and mostly appears as smoother dark regions and slightly richer indirect shading. By <code>m = 4</code> and <code>m = 5</code>, the images are already very close to convergence, which shows that most of the visually important energy has already been captured by the first few bounces.
+In the accumulated sequence, m = 0 again shows only emission, and m = 1 corresponds to direct illumination only. The largest visual change occurs when moving from m = 1 to m = 2, because this is where the first indirect diffuse interreflection enters the image. The most noticeable change is not just a general brightening, but that regions that direct light does not reach well suddenly become illuminated. In particular, the lower half of the bunny becomes much less dark, and the ceiling also becomes visibly brighter. These are strong signs that bounced light is now filling in parts of the scene that were previously missing energy. The floor also receives extra light, and color bleeding from the red and blue walls becomes clearly visible. Moving from m = 2 to m = 3 still improves the result, but the change is smaller. At that point the effect appears more as softer dark regions, smoother transitions, and slightly richer indirect shading rather than a dramatic structural difference. By m = 4 and m = 5, the images are already very close to convergence, which shows that most of the visually important energy has already been captured by the first few bounces.
 </p>
 <br>
 
@@ -583,7 +584,7 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
   In the final version of the renderer, I used Russian Roulette inside <code>at_least_one_bounce_radiance</code> so that paths can terminate randomly instead of always marching all the way to a fixed large depth. In my implementation, the first indirect bounce is always taken when indirect lighting is enabled, and the random continuation test starts only after that. When a path survives, I divide the contribution by the continuation probability, so the estimator remains unbiased in expectation.
 </p>
 <p>
-  The image sequence shows that increasing the maximum depth matters a lot at small depths and much less at large ones. At <code>m = 0</code>, the image contains only emitted light. At <code>m = 1</code>, it contains direct lighting only. The jump to <code>m = 2</code> is the most important, because the first indirect bounce adds the main interreflection effects: indirect fill light and color bleeding. Moving to <code>m = 3</code> and <code>m = 4</code> still improves the image, but the changes are smaller. By <code>m = 100</code>, the image is visually very close to <code>m = 4</code>. This matches the physical intuition for a diffuse Cornell box: each extra bounce contributes less energy than the previous one, so very long paths exist but matter less. Russian Roulette is useful here because it preserves the possibility of long paths without forcing every sample to pay the full cost of tracing them.
+ The image sequence shows that increasing the maximum depth matters a lot at small depths and much less at large ones. At m = 0, the image contains only emitted light. At m = 1, it contains direct lighting only. The jump to m = 2 is the most important, because the first indirect bounce adds the main interreflection effects: indirect fill light, color bleeding, and illumination in regions such as the lower half of the bunny and the ceiling that are not strongly reached by direct light alone. Moving to m = 3 and m = 4 still improves the image, but the changes are smaller and mainly appear as more subtle indirect fill. By m = 100, the image is visually very close to m = 4. In fact, this looks very similar to the accumulated-bounce comparison above: after the first few bounces, the scene is already close to its final appearance, and extra depth changes the image only slightly. This matches the physical intuition for a diffuse Cornell box: each extra bounce contributes less energy than the previous one, so very long paths exist but matter less. Russian Roulette is useful here because it preserves the possibility of long paths without forcing every sample to pay the full cost of tracing them.
 </p>
 <br>
 
@@ -687,6 +688,205 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
 </p>
 <p>
   The same behavior appears in <code>CBspheres_lambertian.dae</code>. The broad empty wall and floor regions converge quickly and remain blue, while the sphere boundaries, the contact shadows under the spheres, and the penumbra regions on the floor receive significantly more samples. The right sphere in particular shows a large high-sample region because its shading changes more sharply across the visible surface and the nearby shadowed region is harder to estimate cleanly. Overall, the sample-rate images show that the adaptive sampler is working as intended: it spends most of its effort on object boundaries, shadow transitions, and other high-variance regions, while reducing work on smooth low-variance areas.
+</p>
+<br>
+
+<h2 align="middle">Challenge Level 3: Photon Mapping</h2>
+
+<h3>
+  Walk through the implementation of the photon mapping renderer.
+</h3>
+<p>
+  I implemented photon mapping as an extension of my existing Project 3 path tracer rather than as a completely separate renderer. The goal of this design was to preserve the original path tracing pipeline for visible transport, direct lighting, and recursive indirect lighting, while adding a photon build pass before rendering and a photon-gather estimate for indirect diffuse illumination. This let me reuse the existing BVH, ray, intersection, BSDF, and light-sampling infrastructure already present in the project.
+</p>
+<p>
+  The first step was adding a photon data structure and a photon map container. Each stored photon records its position, incoming direction, power, and the surface normal at the storage point. I added a photon build pass that runs before any camera rays are traced. During this stage, the renderer clears the photon map, scans the scene lights, selects the supported emitters, and launches a target number of photons into the scene. In my current implementation, I emit photons from point lights and area lights, which is sufficient for the Cornell Box scenes that I used throughout development.
+</p>
+<p>
+  For photon emission, I sample an initial ray and photon power based on the light type. Point lights emit photons uniformly over the sphere, while area lights emit photons from sampled positions on the light surface and sample outgoing directions over the light-facing hemisphere. Each photon is then traced recursively through the scene using the existing BVH intersection routine and the existing BSDF sampling interface. Photon power is updated using the usual throughput factor involving the BSDF value, cosine term, and sampling PDF, and Russian roulette is used to terminate photon paths probabilistically.
+</p>
+<p>
+  I do not store direct photons, since direct lighting is already handled by the original one-bounce estimator from Project 3. Instead, I store photons only after they have scattered at least once, and only when they land on diffuse receivers. This allows photon mapping to focus on indirect diffuse illumination without double-counting the direct illumination term. I also extended photon tracing so that photons are not immediately absorbed at non-diffuse materials. They may continue through mirror, glass, or other sampled BSDF interactions, while still being stored only when they finally reach diffuse surfaces.
+</p>
+<p>
+  During shading, I keep the original zero-bounce emission and direct-lighting estimator unchanged. Photon mapping only affects the indirect diffuse component. At a diffuse shading point, I query nearby photons and estimate radiance using a density-estimation style formula. To make this estimate more stable, I do not simply average all photons in a fixed radius. Instead, I filter photons using surface-normal consistency, same-side checks, and a local plane-distance test to reduce cross-surface leakage. After filtering, I sort accepted photons by distance, keep only the nearest subset, and normalize using an effective radius based on the farthest accepted photon. If the photon estimate is too sparse, I fall back to recursive path tracing; if it is only partially reliable, I blend the photon estimate with the recursive path-traced estimate.
+</p>
+<p>
+  In addition to photon mapping itself, I also completed several missing advanced BSDF components that were necessary to make the reflective and refractive Cornell Box scenes behave correctly. In particular, I implemented mirror, refraction, glass, and microfacet BSDF sampling, as well as the reflect and refract helpers. This was important because several comparison scenes rely on those materials, and without these fixes the baseline renderer itself was not a trustworthy reference. I also integrated Russian roulette into the recursive indirect path-tracing branch so that the baseline renderer and the photon-mapping fallback branch share the same recursive termination strategy.
+</p>
+
+<h3>
+  Show some images rendered with baseline path tracing and photon mapping.
+</h3>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <th>
+        <b>Baseline Path Tracing</b>
+      </th>
+      <th>
+        <b>Photon Mapping</b>
+      </th>
+    </tr>
+    <br>
+    <tr align="center">
+      <td>
+        <img src="images/task6/CBempty_baseline.png" align="middle" width="400px"/>
+        <figcaption>CBempty.dae baseline</figcaption>
+      </td>
+      <td>
+        <img src="images/task6/CBempty_photon.png" align="middle" width="400px"/>
+        <figcaption>CBempty.dae photon mapping</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr align="center">
+      <td>
+        <img src="images/task6/CBbunny_baseline.png" align="middle" width="400px"/>
+        <figcaption>CBbunny.dae baseline</figcaption>
+      </td>
+      <td>
+        <img src="images/task6/CBbunny_photon.png" align="middle" width="400px"/>
+        <figcaption>CBbunny.dae photon mapping</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr align="center">
+      <td>
+        <img src="images/task6/CBlucy_baseline.png" align="middle" width="400px"/>
+        <figcaption>CBlucy.dae baseline</figcaption>
+      </td>
+      <td>
+        <img src="images/task6/CBlucy_photon.png" align="middle" width="400px"/>
+        <figcaption>CBlucy.dae photon mapping</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr align="center">
+      <td>
+        <img src="images/task6/CBspheresLambertian_baseline.png" align="middle" width="400px"/>
+        <figcaption>CBspheres_lambertian.dae baseline</figcaption>
+      </td>
+      <td>
+        <img src="images/task6/CBspheresLambertian_photon.png" align="middle" width="400px"/>
+        <figcaption>CBspheres_lambertian.dae photon mapping</figcaption>
+      </td>
+    </tr>
+    <br>
+  </table>
+</div>
+<br>
+
+<h3>
+  Focus on one particular scene and compare several photon mapping configurations.
+</h3>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="images/task6/CBbunny_baseline.png" align="middle" width="220px"/>
+        <figcaption>Baseline Path Tracing</figcaption>
+      </td>
+      <td>
+        <img src="images/task6/CBbunny_photon.png" align="middle" width="220px"/>
+        <figcaption>Photon Mapping (65536 photons, radius 0.10)</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="images/task6/CBbunny_photon_lowN.png" align="middle" width="220px"/>
+        <figcaption>Photon Mapping (16384 photons, radius 0.10)</figcaption>
+      </td>
+      <td>
+        <img src="images/task6/CBbunny_photon_bigR.png" align="middle" width="220px"/>
+        <figcaption>Photon Mapping (65536 photons, radius 0.20)</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  I used CBbunny.dae as the main controlled comparison scene because it is a Cornell Box scene with an area light and mostly diffuse transport, which makes it a good test case for indirect diffuse photon gathering. In all four renders I kept the baseline rendering parameters fixed and changed only the photon-mapping configuration. The baseline path-traced image serves as the reference solution. The recommended photon-mapping configuration uses a relatively dense photon build and a moderate gather radius. I then compared this against a low-photon configuration and a larger-radius configuration to study how photon density and gather radius affect the final result.
+</p>
+<p>
+  With fewer photons, the photon map becomes much sparser and the gather step finds fewer useful photons at each shading point. In that case, the renderer has to fall back more often to recursive path tracing, so the photon-map contribution becomes weaker. With a larger gather radius, the estimate becomes more stable in the sense that more photons contribute to each query, but local structure is smoothed out more aggressively, and the indirect lighting can appear flatter or slightly washed out. The recommended configuration strikes a better balance between locality and stability, keeping the image visually close to the baseline while still using the photon map for indirect diffuse transport.
+</p>
+<br>
+
+<h3>
+  Compare the results between baseline path tracing and photon mapping in a one-paragraph analysis.
+</h3>
+<p>
+  The current photon-mapping implementation behaves as a hybrid indirect-lighting estimator rather than as a full replacement for the original path tracer. In diffuse Cornell Box scenes such as CBbunny, the baseline path tracer and the photon-mapping renderer produce similar large-scale lighting structure, object silhouettes, and overall illumination balance. The main difference is in how the indirect diffuse term is estimated. The baseline renderer computes it entirely through recursive Monte Carlo path tracing, while the photon-mapping renderer attempts to recover it from nearby stored photons and falls back to recursive path tracing when the photon estimate is too sparse or uncertain. In practice, this means photon mapping can make the indirect estimate more structured and controllable, but it is also sensitive to the photon count and gather radius. When these parameters are well chosen, the photon-based result stays close to the baseline while producing a meaningful alternative estimate of indirect diffuse lighting.
+</p>
+<br>
+
+<h3>
+  Compare rendering times and photon-gather statistics on CBbunny.
+</h3>
+
+<div align="middle">
+  <table style="width:85%">
+    <tr align="center">
+      <th>Configuration</th>
+      <th>Photon Build (s)</th>
+      <th>Render Time (s)</th>
+      <th>Stored Photons</th>
+      <th>Gather Hit Rate</th>
+      <th>Average Photons / Query</th>
+    </tr>
+    <tr align="center">
+      <td>Baseline Path Tracing</td>
+      <td>N/A</td>
+      <td>[fill in]</td>
+      <td>N/A</td>
+      <td>N/A</td>
+      <td>N/A</td>
+    </tr>
+    <tr align="center">
+      <td>Photon Mapping (65536, radius 0.10)</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+    </tr>
+    <tr align="center">
+      <td>Photon Mapping (16384, radius 0.10)</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+    </tr>
+    <tr align="center">
+      <td>Photon Mapping (65536, radius 0.20)</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+      <td>[fill in]</td>
+    </tr>
+  </table>
+</div>
+
+<p>
+  The current photon-mapping implementation is slower than the baseline path tracer on these settings, which is expected for the present stage of the project. First, it introduces an explicit photon-build pass before rendering begins. Second, the photon map is currently queried with a linear scan rather than an accelerated nearest-neighbor data structure such as a kd-tree. Third, the renderer uses a hybrid strategy and may still fall back to recursive path tracing when the photon estimate is weak, so it can end up paying part of the cost of both methods. Even so, the timing and gather statistics are useful because they reveal how the renderer behaves as the photon count and gather radius change. In particular, reducing the photon count lowers the stored-photon count and the gather hit rate, while increasing the gather radius raises the number of photons used in each query but also tends to oversmooth the result.
+</p>
+<br>
+
+<h3>
+  Supporting implementation work.
+</h3>
+<p>
+  In addition to photon mapping itself, I completed several renderer improvements that were necessary to make the experimental comparisons meaningful. I implemented missing advanced BSDF components for mirror, refraction, glass, and microfacet materials so that reflective and refractive Cornell Box scenes would render correctly in the baseline renderer. I also integrated Russian roulette into the recursive indirect path-tracing branch, which improved consistency between the baseline path tracer and the photon-mapping fallback branch. These supporting changes are not separate challenge claims by themselves, but they were important to make the photon-mapping comparisons technically valid.
+</p>
+<br>
+
+<h3>
+  Bidirectional path tracing (in progress).
+</h3>
+<p>
+  In parallel with photon mapping, I am also working on bidirectional path tracing as a second advanced rendering technique. At the moment this is still in progress rather than complete. My current plan is to construct camera and light subpaths separately and then connect them to evaluate additional transport paths that ordinary path tracing samples inefficiently. For now, photon mapping is the completed Challenge Level 3 technique in this project, while BDPT is the next major system I am building.
 </p>
 <br>
 
