@@ -39,23 +39,22 @@
 
 <body>
 
-<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2023</h1>
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2026</h1>
 <h1 align="middle">Project 3: Path Tracer</h1>
 <h2 align="middle">Xuhuan Shen</h2>
 
 <!-- Add Website URL -->
-<h2 align="middle">Website URL: https://cal-cs184-student.github.io/hw-webpages-Rin-Kagamine/hw3/<a href="https://cal-cs184-student.github.io/hw-webpages-Rin-Kagamine/hw3/">https://cal-cs184-student.github.io/hw-webpages-Rin-Kagamine/hw3/</a></h2>
-
+<h2 align="middle">Website URL: <a href="https://cal-cs184-student.github.io/hw-webpages-Rin-Kagamine/hw3/">https://cal-cs184-student.github.io/hw-webpages-Rin-Kagamine/hw3/</a></h2>
 <br><br>
 
 <h2>Overview</h2>
 <p>
 In this project, I built a path tracer step by step, starting from basic camera ray generation and primitive intersection, then accelerating traversal with a BVH, adding direct illumination, extending the renderer to recursive global illumination with multiple bounces and Russian Roulette, and finally improving efficiency with adaptive sampling. The experiments in each part were designed not only to verify correctness, but also to show how each component affects image quality, noise, and rendering time.
 </p>
-<h2 align="middle">Conclusion</h2>
 <p>
-Overall, this project turned a basic ray-scene intersection program into a practical Monte Carlo path tracer. Across the five parts, I moved from visibility and acceleration to direct lighting, full light transport, and adaptive computation. The final results show both the visual benefits of global illumination and the importance of variance reduction and efficient sampling for making path tracing practical.
+What I found especially enjoyable in this project was watching the renderer gradually become more complete. It felt genuinely fun to see the image improve one piece at a time: first geometry, then direct lighting, then multiple bounces, and finally adaptive sampling. In particular, it was very interesting to see the effect of indirect illumination so directly in the experiments. Comparing direct-only, indirect-only, and different bounce depths made interreflection much more intuitive to me than just reading the rendering equation on slides. Overall, this project turned a basic ray-scene intersection program into a practical Monte Carlo path tracer and made the connection between light transport theory and the final rendered image much clearer.
 </p>
+
 <h2 align="middle">Part 1: Ray Generation and Scene Intersection (20 Points)</h2>
 <!-- Walk through the ray generation and primitive intersection parts of the rendering pipeline.
 Explain the triangle intersection algorithm you implemented in your own words.
@@ -73,7 +72,7 @@ After that, each ray was passed to <code>est_radiance_global_illumination</code>
 <br>
 
 <h3>
-  Explain the triangle intersection algorithm you implemented in your own words.
+  Explain the triangle intersection algorithm:
 </h3>
 <p>
 For triangle intersection, I implemented the Möller–Trumbore algorithm. I first formed the two edge vectors of the triangle, then used cross products and dot products to solve for three unknowns at once: the ray parameter <i>t</i> and the two barycentric coordinates. This method is convenient because it tests the actual triangle directly, instead of first intersecting the ray with the plane and then doing a separate inside-outside test.
@@ -84,6 +83,7 @@ Once I computed the candidate values, I checked whether the intersection was val
 <p>
 For the full <code>intersect</code> function, after accepting a valid hit, I stored the hit time, the primitive pointer, and the BSDF pointer in the intersection record. I then used the barycentric coordinates to interpolate the three vertex normals, which produced smooth normal shading instead of a single flat face normal. Finally, I updated the ray’s <code>max_t</code> to the current hit distance so that later tests on the same ray would only keep something closer.
 </p>
+
 <br>
 
 <h3>
@@ -108,9 +108,6 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
         <figcaption>CBbunny.dae</figcaption>
       </td>
       <td>
-        <div style="width:400px; height:300px; display:flex; align-items:center; justify-content:center; color:#666;">
-          Additional views omitted here.
-        </div>
         <figcaption></figcaption>
       </td>
     </tr>
@@ -131,24 +128,27 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
 <p>
   One edge case is that all centroids may fall on the same side of the split, which would cause the recursion to fail to shrink the problem size. To avoid this, I used a fallback that forces a median split when the partition becomes degenerate. This guarantees progress and prevents infinite recursion. Overall, the BVH organizes primitives into a hierarchy of bounding boxes so that rays can quickly reject large parts of the scene without testing every triangle individually.
 </p>
-
+<p>
+  For bounding-box intersection, I implemented the standard slab test in <code>BBox::intersect</code>. For each axis, I computed the entry and exit times of the ray with the corresponding box slabs, handled near-parallel rays by checking whether the ray origin already lies inside the slab, and progressively updated the valid interval <code>[t0, t1]</code>. If the interval ever became empty, the ray could not intersect the box. During BVH traversal, I first tested the ray against the current node’s bounding box. If the box was missed, I immediately returned false. If the node was a leaf, I tested the ray against all primitives in that leaf. Otherwise, I recursively traversed the left and right children. In the <code>has_intersection</code> version I used short-circuiting, while in the full <code>intersect</code> version I visited both children so that the closest hit could be recorded through the primitive intersection routine.
+</p>
 <h3>
   Show images with normal shading for a few large .dae files that you can only render with BVH acceleration.
 </h3>
+
 <div align="middle">
   <table style="width:100%">
     <tr align="center">
       <td>
         <img src="images/task2/banana.png" align="middle" width="400px"/>
-        <figcaption>cow.dae (normal shading)</figcaption>
+        <figcaption>banana.dae (normal shading)</figcaption>
       </td>
       <td>
         <img src="images/task2/cow.png" align="middle" width="400px"/>
-        <figcaption>maxplanck.dae (normal shading)</figcaption>
+        <figcaption>cow.dae (normal shading)</figcaption>
       </td>
       <td>
-        <img src="images/task2/bunny.png" align="middle" width="400px"/>
-        <figcaption>CBlucy.dae (normal shading)</figcaption>
+        <img src="images/task2/CBbunny.png" align="middle" width="400px"/>
+        <figcaption>CBbunny.dae (normal shading)</figcaption>
       </td>
     </tr>
   </table>
@@ -180,7 +180,7 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
       <td>101.8509x</td>
     </tr>
     <tr align="center">
-      <td>bunny.dae</td>
+      <td>CBbunny.dae</td>
       <td>584.5095s</td>
       <td>0.2543s</td>
       <td>2299.23x</td>
@@ -189,7 +189,7 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
 </div>
 
 <p>
-  The timing results show that BVH acceleration significantly reduces rendering time, especially for scenes with large numbers of triangles. Without BVH, each ray may need to test against essentially every primitive in the scene, so render time grows quickly as scene complexity increases. With BVH, many primitives can be discarded early by first intersecting the ray with bounding boxes, so the number of expensive primitive intersection tests drops substantially. The improvement becomes more dramatic on more complex meshes such as maxplanck.dae and CBlucy.dae, where brute-force traversal is much more costly. In other words, BVH does not change the final rendered appearance, but it makes the same normal-shaded result far more practical to compute.
+  The timing results show that BVH acceleration significantly reduces rendering time, especially for scenes with large numbers of triangles. Without BVH, each ray may need to test against essentially every primitive in the scene, so render time grows quickly as scene complexity increases. With BVH, many primitives can be discarded early by first intersecting the ray with bounding boxes, so the number of expensive primitive intersection tests drops substantially. The improvement becomes more dramatic on more complex meshes such as banana.dae cow.dae and CBbunny.dae, where brute-force traversal is much more costly. In other words, BVH does not change the final rendered appearance, but it makes the same normal-shaded result far more practical to compute.
 </p>
 
 
