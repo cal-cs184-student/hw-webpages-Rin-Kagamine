@@ -50,9 +50,12 @@
 
 <h2>Overview</h2>
 <p>
-In this homework, I implemented a software rasterizer from scratch. I built triangle rasterization using edge tests, added supersampling for antialiasing, implemented barycentric interpolation for smooth vertex colors, and added texture mapping with both nearest/bilinear pixel sampling and mipmap-based level sampling.
+In this project, I built a path tracer step by step, starting from basic camera ray generation and primitive intersection, then accelerating traversal with a BVH, adding direct illumination, extending the renderer to recursive global illumination with multiple bounces and Russian Roulette, and finally improving efficiency with adaptive sampling. The experiments in each part were designed not only to verify correctness, but also to show how each component affects image quality, noise, and rendering time.
 </p>
-
+<h2 align="middle">Conclusion</h2>
+<p>
+Overall, this project turned a basic ray-scene intersection program into a practical Monte Carlo path tracer. Across the five parts, I moved from visibility and acceleration to direct lighting, full light transport, and adaptive computation. The final results show both the visual benefits of global illumination and the importance of variance reduction and efficient sampling for making path tracing practical.
+</p>
 <h2 align="middle">Part 1: Ray Generation and Scene Intersection (20 Points)</h2>
 <!-- Walk through the ray generation and primitive intersection parts of the rendering pipeline.
 Explain the triangle intersection algorithm you implemented in your own words.
@@ -280,7 +283,7 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
         <figcaption>16 Light Rays (bench.dae)</figcaption>
       </td>
       <td>
-        <img src="images/bench_l64.png" align="middle" width="200px"/>
+        <img src="images/task3/bench_l64.png" align="middle" width="200px"/>
         <figcaption>64 Light Rays (bench.dae)</figcaption>
       </td>
     </tr>
