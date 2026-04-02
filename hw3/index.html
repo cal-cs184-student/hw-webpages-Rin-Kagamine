@@ -690,205 +690,208 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   The same behavior appears in <code>CBspheres_lambertian.dae</code>. The broad empty wall and floor regions converge quickly and remain blue, while the sphere boundaries, the contact shadows under the spheres, and the penumbra regions on the floor receive significantly more samples. The right sphere in particular shows a large high-sample region because its shading changes more sharply across the visible surface and the nearby shadowed region is harder to estimate cleanly. Overall, the sample-rate images show that the adaptive sampler is working as intended: it spends most of its effort on object boundaries, shadow transitions, and other high-variance regions, while reducing work on smooth low-variance areas.
 </p>
 <br>
-
-<h2 align="middle">Challenge Level 3: Photon Mapping</h2>
+<h2 align="middle">Challenge Level 3: Photon Mapping with Photon-Map KD-Tree Acceleration</h2>
 
 <h3>
-  Walk through the implementation of the photon mapping renderer.
+  Introduce the algorithms.
 </h3>
 <p>
-  I implemented photon mapping as an extension of my existing Project 3 path tracer rather than as a completely separate renderer. The goal of this design was to preserve the original path tracing pipeline for visible transport, direct lighting, and recursive indirect lighting, while adding a photon build pass before rendering and a photon-gather estimate for indirect diffuse illumination. This let me reuse the existing BVH, ray, intersection, BSDF, and light-sampling infrastructure already present in the project.
+  The main advanced rendering technique I implemented is photon mapping. Photon mapping is a two-pass global illumination algorithm. In the first pass, instead of only tracing rays from the camera, we emit photons from the scene lights and trace them through the scene. Whenever a photon reaches a suitable surface, we store information about that interaction, including its position, incoming direction, and power. In the second pass, we render the scene from the camera as usual, but we estimate part of the indirect illumination by gathering nearby photons around each visible shading point.
 </p>
 <p>
-  The first step was adding a photon data structure and a photon map container. Each stored photon records its position, incoming direction, power, and the surface normal at the storage point. I added a photon build pass that runs before any camera rays are traced. During this stage, the renderer clears the photon map, scans the scene lights, selects the supported emitters, and launches a target number of photons into the scene. In my current implementation, I emit photons from point lights and area lights, which is sufficient for the Cornell Box scenes that I used throughout development.
+  The key idea is that the photon pass precomputes a sparse representation of how light energy moves from the lights into the scene. Then, during the camera pass, the renderer can reuse this precomputed light transport to estimate indirect illumination, rather than relying entirely on recursive random path tracing to rediscover the same energy at every pixel. In the diffuse case, this is typically done through density estimation: photons within a neighborhood around the shading point are gathered, weighted by the local BSDF, and normalized by the gather area.
 </p>
 <p>
-  For photon emission, I sample an initial ray and photon power based on the light type. Point lights emit photons uniformly over the sphere, while area lights emit photons from sampled positions on the light surface and sample outgoing directions over the light-facing hemisphere. Each photon is then traced recursively through the scene using the existing BVH intersection routine and the existing BSDF sampling interface. Photon power is updated using the usual throughput factor involving the BSDF value, cosine term, and sampling PDF, and Russian roulette is used to terminate photon paths probabilistically.
-</p>
-<p>
-  I do not store direct photons, since direct lighting is already handled by the original one-bounce estimator from Project 3. Instead, I store photons only after they have scattered at least once, and only when they land on diffuse receivers. This allows photon mapping to focus on indirect diffuse illumination without double-counting the direct illumination term. I also extended photon tracing so that photons are not immediately absorbed at non-diffuse materials. They may continue through mirror, glass, or other sampled BSDF interactions, while still being stored only when they finally reach diffuse surfaces.
-</p>
-<p>
-  During shading, I keep the original zero-bounce emission and direct-lighting estimator unchanged. Photon mapping only affects the indirect diffuse component. At a diffuse shading point, I query nearby photons and estimate radiance using a density-estimation style formula. To make this estimate more stable, I do not simply average all photons in a fixed radius. Instead, I filter photons using surface-normal consistency, same-side checks, and a local plane-distance test to reduce cross-surface leakage. After filtering, I sort accepted photons by distance, keep only the nearest subset, and normalize using an effective radius based on the farthest accepted photon. If the photon estimate is too sparse, I fall back to recursive path tracing; if it is only partially reliable, I blend the photon estimate with the recursive path-traced estimate.
-</p>
-<p>
-  In addition to photon mapping itself, I also completed several missing advanced BSDF components that were necessary to make the reflective and refractive Cornell Box scenes behave correctly. In particular, I implemented mirror, refraction, glass, and microfacet BSDF sampling, as well as the reflect and refract helpers. This was important because several comparison scenes rely on those materials, and without these fixes the baseline renderer itself was not a trustworthy reference. I also integrated Russian roulette into the recursive indirect path-tracing branch so that the baseline renderer and the photon-mapping fallback branch share the same recursive termination strategy.
+  In addition to photon mapping itself, I also implemented a kd-tree acceleration structure for the photon map. This kd-tree is not a replacement for the scene BVH; instead, it accelerates the photon-gather stage by reducing the cost of radius queries over stored photons. Without such an acceleration structure, every gather query would need to linearly scan the entire photon list. With a balanced kd-tree, the renderer can prune large parts of the photon set during nearby-photon queries, especially when the photon map becomes dense.
 </p>
 
 <h3>
-  Show some images rendered with baseline path tracing and photon mapping.
+  Walk through what I implemented.
+</h3>
+<p>
+  I implemented photon mapping as an extension of my existing Project 3 path tracer rather than as a separate renderer. I preserved the original Project 3 structure for zero-bounce emission, direct lighting, and recursive indirect path tracing, and then added a photon build pass before rendering together with a photon-gather estimator for indirect diffuse illumination. This made it possible to reuse the existing BVH, ray, intersection, BSDF, and light-sampling infrastructure already present in the renderer.
+</p>
+<p>
+  The first step was adding a photon data structure and a photon map container. Each stored photon records its position, incoming direction, power, and the surface normal at the storage point. Before launching camera rays, the renderer now performs a photon build pass. In this stage, it scans the scene lights, selects supported emitters, launches a target number of photons, and traces them through the scene using the existing BVH and BSDF sampling framework. I currently emit photons from point lights and area lights, which is sufficient for the Cornell Box scenes I used in my experiments.
+</p>
+<p>
+  During photon tracing, the renderer recursively intersects each photon ray with the scene and updates the photon power using the standard throughput factor involving the BSDF value, cosine term, and PDF. I terminate photon paths using Russian roulette. I do not store direct photons, because direct lighting is already handled by the original one-bounce direct-lighting estimator from Project 3. Instead, I store photons only after at least one bounce, and only when they land on diffuse receivers. This makes photon mapping target indirect diffuse transport without double-counting direct illumination.
+</p>
+<p>
+  During the camera pass, the renderer keeps the original Project 3 direct-lighting path unchanged. Photon mapping only contributes to the indirect diffuse term. At a diffuse shading point, the renderer gathers nearby photons and estimates radiance using a density-estimation style formula. To make the estimator more stable, I do not simply average all photons in a fixed radius. I filter candidates using surface-normal consistency, same-side checks, and local plane-distance tests to reduce leakage across nearby but unrelated surfaces. After filtering, I sort accepted photons by distance, keep only the nearest subset, and normalize using an effective radius determined by the farthest accepted photon. If the photon estimate is too sparse, I fall back to recursive path tracing; if it is only partially reliable, I blend the photon estimate with the path-traced one.
+</p>
+<p>
+  I also implemented a kd-tree over the stored photon positions. After the photon build pass finishes, the renderer can optionally build a balanced kd-tree using recursive median splits along the dominant axis of each photon subset. During photon gathering, the renderer then performs a radius query against the kd-tree instead of linearly scanning the full photon list. I exposed this choice through a command-line toggle so that I could directly compare linear-scan gathering and kd-tree gathering under the same photon-mapping configuration.
+</p>
+<p>
+  Finally, I completed several supporting parts of the renderer that were necessary to make the experimental comparisons valid. In particular, I implemented the missing advanced BSDF pieces for mirror, refraction, glass, and microfacet materials so that reflective and refractive Cornell Box scenes would behave meaningfully. I also integrated Russian roulette into the recursive indirect path-tracing branch, which improved consistency between the baseline Project 3 integrator and the photon-mapping fallback path.
+</p>
+
+<h3>
+  Experimental setup.
+</h3>
+<p>
+  I designed the experiments around three variables: photon query structure, rendering configuration, and scene. The photon query structure had two settings: linear scan and kd-tree. The rendering configuration had four settings: the baseline Project 3 path tracer, photon mapping with the recommended settings, photon mapping with a reduced photon count, and photon mapping with a larger gather radius. The scene variable used three Cornell Box scenes: CBbunny, CBlucy, and CBdragon.
+</p>
+<p>
+  One subtle but important point is that the baseline path tracer does not use the photon map at all. Because of that, there is no meaningful “baseline with linear scan” versus “baseline with kd-tree” distinction; the kd-tree only matters when photon mapping is enabled. For that reason, the final experimental matrix contains 21 primary renders rather than 24: each scene has 1 baseline image plus 6 photon-mapping images, corresponding to 3 parameter settings crossed with 2 photon-query modes.
+</p>
+<p>
+  All renders used the same main rendering parameters unless otherwise noted: 8 threads, 256 camera samples per pixel, 4 area-light samples, maximum ray depth 5, and output resolution 320 by 240. For photon mapping, I used three parameter sets: a recommended setting of 65536 photons with gather radius 0.10, a low-photon setting of 16384 photons with gather radius 0.10, and a large-radius setting of 65536 photons with gather radius 0.20. The kd-tree experiments used the same photon configurations as the linear-scan experiments so that the only algorithmic difference was the photon query structure.
+</p>
+
+<h3>
+  Show the image comparisons.
 </h3>
 <div align="middle">
   <table style="width:100%">
     <tr align="center">
-      <th>
-        <b>Baseline Path Tracing</b>
-      </th>
-      <th>
-        <b>Photon Mapping</b>
-      </th>
+      <th><b>Baseline</b></th>
+      <th><b>Linear Normal</b></th>
+      <th><b>Linear LowN</b></th>
+      <th><b>Linear BigR</b></th>
     </tr>
-    <br>
     <tr align="center">
-      <td>
-        <img src="images/task6/CBempty_baseline.png" align="middle" width="400px"/>
-        <figcaption>CBempty.dae baseline</figcaption>
-      </td>
-      <td>
-        <img src="images/task6/CBempty_photon.png" align="middle" width="400px"/>
-        <figcaption>CBempty.dae photon mapping</figcaption>
-      </td>
+      <td><img src="images/task6/factorial/CBbunny_baseline.png" align="middle" width="220px"/><figcaption>CBbunny baseline</figcaption></td>
+      <td><img src="images/task6/factorial/CBbunny_linear_normal.png" align="middle" width="220px"/><figcaption>CBbunny linear normal</figcaption></td>
+      <td><img src="images/task6/factorial/CBbunny_linear_lowN.png" align="middle" width="220px"/><figcaption>CBbunny linear lowN</figcaption></td>
+      <td><img src="images/task6/factorial/CBbunny_linear_bigR.png" align="middle" width="220px"/><figcaption>CBbunny linear bigR</figcaption></td>
     </tr>
-    <br>
     <tr align="center">
-      <td>
-        <img src="images/task6/CBbunny_baseline.png" align="middle" width="400px"/>
-        <figcaption>CBbunny.dae baseline</figcaption>
-      </td>
-      <td>
-        <img src="images/task6/CBbunny_photon.png" align="middle" width="400px"/>
-        <figcaption>CBbunny.dae photon mapping</figcaption>
-      </td>
+      <td><img src="images/task6/factorial/CBlucy_baseline.png" align="middle" width="220px"/><figcaption>CBlucy baseline</figcaption></td>
+      <td><img src="images/task6/factorial/CBlucy_linear_normal.png" align="middle" width="220px"/><figcaption>CBlucy linear normal</figcaption></td>
+      <td><img src="images/task6/factorial/CBlucy_linear_lowN.png" align="middle" width="220px"/><figcaption>CBlucy linear lowN</figcaption></td>
+      <td><img src="images/task6/factorial/CBlucy_linear_bigR.png" align="middle" width="220px"/><figcaption>CBlucy linear bigR</figcaption></td>
     </tr>
-    <br>
     <tr align="center">
-      <td>
-        <img src="images/task6/CBlucy_baseline.png" align="middle" width="400px"/>
-        <figcaption>CBlucy.dae baseline</figcaption>
-      </td>
-      <td>
-        <img src="images/task6/CBlucy_photon.png" align="middle" width="400px"/>
-        <figcaption>CBlucy.dae photon mapping</figcaption>
-      </td>
+      <td><img src="images/task6/factorial/CBdragon_baseline.png" align="middle" width="220px"/><figcaption>CBdragon baseline</figcaption></td>
+      <td><img src="images/task6/factorial/CBdragon_linear_normal.png" align="middle" width="220px"/><figcaption>CBdragon linear normal</figcaption></td>
+      <td><img src="images/task6/factorial/CBdragon_linear_lowN.png" align="middle" width="220px"/><figcaption>CBdragon linear lowN</figcaption></td>
+      <td><img src="images/task6/factorial/CBdragon_linear_bigR.png" align="middle" width="220px"/><figcaption>CBdragon linear bigR</figcaption></td>
     </tr>
-    <br>
+  </table>
+</div>
+<br>
+
+<div align="middle">
+  <table style="width:100%">
     <tr align="center">
-      <td>
-        <img src="images/task6/CBspheresLambertian_baseline.png" align="middle" width="400px"/>
-        <figcaption>CBspheres_lambertian.dae baseline</figcaption>
-      </td>
-      <td>
-        <img src="images/task6/CBspheresLambertian_photon.png" align="middle" width="400px"/>
-        <figcaption>CBspheres_lambertian.dae photon mapping</figcaption>
-      </td>
+      <th><b>Baseline</b></th>
+      <th><b>KD Normal</b></th>
+      <th><b>KD LowN</b></th>
+      <th><b>KD BigR</b></th>
     </tr>
-    <br>
+    <tr align="center">
+      <td><img src="images/task6/factorial/CBbunny_baseline.png" align="middle" width="220px"/><figcaption>CBbunny baseline</figcaption></td>
+      <td><img src="images/task6/factorial/CBbunny_kd_normal.png" align="middle" width="220px"/><figcaption>CBbunny kd normal</figcaption></td>
+      <td><img src="images/task6/factorial/CBbunny_kd_lowN.png" align="middle" width="220px"/><figcaption>CBbunny kd lowN</figcaption></td>
+      <td><img src="images/task6/factorial/CBbunny_kd_bigR.png" align="middle" width="220px"/><figcaption>CBbunny kd bigR</figcaption></td>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial/CBlucy_baseline.png" align="middle" width="220px"/><figcaption>CBlucy baseline</figcaption></td>
+      <td><img src="images/task6/factorial/CBlucy_kd_normal.png" align="middle" width="220px"/><figcaption>CBlucy kd normal</figcaption></td>
+      <td><img src="images/task6/factorial/CBlucy_kd_lowN.png" align="middle" width="220px"/><figcaption>CBlucy kd lowN</figcaption></td>
+      <td><img src="images/task6/factorial/CBlucy_kd_bigR.png" align="middle" width="220px"/><figcaption>CBlucy kd bigR</figcaption></td>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial/CBdragon_baseline.png" align="middle" width="220px"/><figcaption>CBdragon baseline</figcaption></td>
+      <td><img src="images/task6/factorial/CBdragon_kd_normal.png" align="middle" width="220px"/><figcaption>CBdragon kd normal</figcaption></td>
+      <td><img src="images/task6/factorial/CBdragon_kd_lowN.png" align="middle" width="220px"/><figcaption>CBdragon kd lowN</figcaption></td>
+      <td><img src="images/task6/factorial/CBdragon_kd_bigR.png" align="middle" width="220px"/><figcaption>CBdragon kd bigR</figcaption></td>
+    </tr>
   </table>
 </div>
 <br>
 
 <h3>
-  Focus on one particular scene and compare several photon mapping configurations.
+  Analyze image quality across the experiment.
+</h3>
+<p>
+  Across all three scenes, the baseline and photon-mapped renders preserve the same large-scale structure: the object silhouettes remain stable, the Cornell Box wall colors remain correct, and the global lighting balance is still recognizable. This is especially visible in CBbunny and CBlucy, where the normal photon-mapping settings stay visually close to the baseline path tracer. That is an important result, because it shows that the photon-mapping estimator is functioning as an indirect-lighting replacement or supplement, rather than completely changing the renderer’s overall appearance.
+</p>
+<p>
+  The low-photon setting tends to look more conservative. In several cases it appears slightly closer to the baseline image than the normal photon setting does. However, this should not be interpreted as the photon map becoming better. Instead, it reflects the fact that with too few stored photons the gather step becomes sparse, which forces the renderer to fall back more often to recursive path tracing. In other words, the low-photon images often look safer because the photon map is contributing less.
+</p>
+<p>
+  The large-radius setting consistently shows the clearest artifacts. In CBbunny, the wall and ceiling develop larger translucent circular blotches, and the indirect lighting becomes more spatially blurred. Similar behavior appears in CBlucy and CBdragon as well. This is exactly the expected tradeoff for density estimation: a larger gather radius produces a smoother and more stable estimate, but it also washes out local detail and makes visible spatial averaging artifacts more likely.
+</p>
+<p>
+  Comparing linear-scan photon mapping and kd-tree photon mapping, the images are effectively the same for the same photon parameters. This is the expected result. The kd-tree changes how nearby photons are found, but it does not change which photons are stored, how photons are filtered, or how radiance is estimated once the nearby set has been found. Because of that, the kd-tree serves as a performance optimization rather than an image-quality change.
+</p>
+
+<h3>
+  Show sample-rate images and discuss what they reveal.
 </h3>
 <div align="middle">
   <table style="width:100%">
     <tr align="center">
-      <td>
-        <img src="images/task6/CBbunny_baseline.png" align="middle" width="220px"/>
-        <figcaption>Baseline Path Tracing</figcaption>
-      </td>
-      <td>
-        <img src="images/task6/CBbunny_photon.png" align="middle" width="220px"/>
-        <figcaption>Photon Mapping (65536 photons, radius 0.10)</figcaption>
-      </td>
-    </tr>
-    <tr align="center">
-      <td>
-        <img src="images/task6/CBbunny_photon_lowN.png" align="middle" width="220px"/>
-        <figcaption>Photon Mapping (16384 photons, radius 0.10)</figcaption>
-      </td>
-      <td>
-        <img src="images/task6/CBbunny_photon_bigR.png" align="middle" width="220px"/>
-        <figcaption>Photon Mapping (65536 photons, radius 0.20)</figcaption>
-      </td>
+      <td><img src="images/task6/factorial/CBbunny_baseline_rate.png" align="middle" width="220px"/><figcaption>CBbunny baseline rate</figcaption></td>
+      <td><img src="images/task6/factorial/CBbunny_linear_bigR_rate.png" align="middle" width="220px"/><figcaption>CBbunny linear bigR rate</figcaption></td>
+      <td><img src="images/task6/factorial/CBlucy_kd_normal_rate.png" align="middle" width="220px"/><figcaption>CBlucy kd normal rate</figcaption></td>
+      <td><img src="images/task6/factorial/CBdragon_kd_normal_rate.png" align="middle" width="220px"/><figcaption>CBdragon kd normal rate</figcaption></td>
     </tr>
   </table>
 </div>
 <p>
-  I used CBbunny.dae as the main controlled comparison scene because it is a Cornell Box scene with an area light and mostly diffuse transport, which makes it a good test case for indirect diffuse photon gathering. In all four renders I kept the baseline rendering parameters fixed and changed only the photon-mapping configuration. The baseline path-traced image serves as the reference solution. The recommended photon-mapping configuration uses a relatively dense photon build and a moderate gather radius. I then compared this against a low-photon configuration and a larger-radius configuration to study how photon density and gather radius affect the final result.
+  The sample-rate images are useful because they show where the adaptive sampler is investing additional effort. In the baseline rate images, the most intense sampling tends to occur at geometric silhouettes and other high-contrast boundaries. In the photon-mapped rate images, those regions are still important, but additional high-sample regions also appear where faint photon-related wall artifacts occur. This is particularly noticeable in the larger-radius settings. These rate images confirm that the remaining visible artifacts are not only noticeable to the eye, but are also being recognized by the adaptive sampler as higher-variance regions.
 </p>
-<p>
-  With fewer photons, the photon map becomes much sparser and the gather step finds fewer useful photons at each shading point. In that case, the renderer has to fall back more often to recursive path tracing, so the photon-map contribution becomes weaker. With a larger gather radius, the estimate becomes more stable in the sense that more photons contribute to each query, but local structure is smoothed out more aggressively, and the indirect lighting can appear flatter or slightly washed out. The recommended configuration strikes a better balance between locality and stability, keeping the image visually close to the baseline while still using the photon map for indirect diffuse transport.
-</p>
-<br>
 
 <h3>
-  Compare the results between baseline path tracing and photon mapping in a one-paragraph analysis.
+  Compare rendering times across all configurations.
 </h3>
-<p>
-  The current photon-mapping implementation behaves as a hybrid indirect-lighting estimator rather than as a full replacement for the original path tracer. In diffuse Cornell Box scenes such as CBbunny, the baseline path tracer and the photon-mapping renderer produce similar large-scale lighting structure, object silhouettes, and overall illumination balance. The main difference is in how the indirect diffuse term is estimated. The baseline renderer computes it entirely through recursive Monte Carlo path tracing, while the photon-mapping renderer attempts to recover it from nearby stored photons and falls back to recursive path tracing when the photon estimate is too sparse or uncertain. In practice, this means photon mapping can make the indirect estimate more structured and controllable, but it is also sensitive to the photon count and gather radius. When these parameters are well chosen, the photon-based result stays close to the baseline while producing a meaningful alternative estimate of indirect diffuse lighting.
-</p>
-<br>
-
-<h3>
-  Compare rendering times and photon-gather statistics on CBbunny.
-</h3>
-
 <div align="middle">
-  <table style="width:85%">
+  <table style="width:95%">
     <tr align="center">
+      <th>Scene</th>
       <th>Configuration</th>
+      <th>Query Mode</th>
       <th>Photon Build (s)</th>
       <th>Render Time (s)</th>
       <th>Stored Photons</th>
-      <th>Gather Hit Rate</th>
-      <th>Average Photons / Query</th>
+      <th>Hit Rate</th>
+      <th>Avg. Photons / Query</th>
     </tr>
-    <tr align="center">
-      <td>Baseline Path Tracing</td>
-      <td>N/A</td>
-      <td>[fill in]</td>
-      <td>N/A</td>
-      <td>N/A</td>
-      <td>N/A</td>
-    </tr>
-    <tr align="center">
-      <td>Photon Mapping (65536, radius 0.10)</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-    </tr>
-    <tr align="center">
-      <td>Photon Mapping (16384, radius 0.10)</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-    </tr>
-    <tr align="center">
-      <td>Photon Mapping (65536, radius 0.20)</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-      <td>[fill in]</td>
-    </tr>
+    <tr align="center"><td>CBbunny</td><td>Baseline</td><td>N/A</td><td>N/A</td><td>25.2761</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
+    <tr align="center"><td>CBbunny</td><td>Normal</td><td>Linear</td><td>0.0717</td><td>66.4687</td><td>2213</td><td>92.8%</td><td>3.45</td></tr>
+    <tr align="center"><td>CBbunny</td><td>LowN</td><td>Linear</td><td>0.0172</td><td>34.1351</td><td>564</td><td>54.4%</td><td>0.87</td></tr>
+    <tr align="center"><td>CBbunny</td><td>BigR</td><td>Linear</td><td>0.0796</td><td>44.2315</td><td>2213</td><td>97.7%</td><td>11.06</td></tr>
+    <tr align="center"><td>CBbunny</td><td>Normal</td><td>KD-Tree</td><td>0.0711</td><td>36.0601</td><td>2213</td><td>92.8%</td><td>3.45</td></tr>
+    <tr align="center"><td>CBbunny</td><td>LowN</td><td>KD-Tree</td><td>0.0235</td><td>30.5964</td><td>564</td><td>54.4%</td><td>0.87</td></tr>
+    <tr align="center"><td>CBbunny</td><td>BigR</td><td>KD-Tree</td><td>0.0739</td><td>29.9157</td><td>2213</td><td>97.7%</td><td>11.06</td></tr>
+
+    <tr align="center"><td>CBlucy</td><td>Baseline</td><td>N/A</td><td>N/A</td><td>41.1299</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
+    <tr align="center"><td>CBlucy</td><td>Normal</td><td>Linear</td><td>0.1075</td><td>93.4634</td><td>1963</td><td>93.6%</td><td>3.76</td></tr>
+    <tr align="center"><td>CBlucy</td><td>LowN</td><td>Linear</td><td>0.0305</td><td>53.3392</td><td>485</td><td>57.8%</td><td>0.92</td></tr>
+    <tr align="center"><td>CBlucy</td><td>BigR</td><td>Linear</td><td>0.1348</td><td>50.5829</td><td>1963</td><td>99.6%</td><td>12.70</td></tr>
+    <tr align="center"><td>CBlucy</td><td>Normal</td><td>KD-Tree</td><td>0.1341</td><td>49.6789</td><td>1963</td><td>93.6%</td><td>3.76</td></tr>
+    <tr align="center"><td>CBlucy</td><td>LowN</td><td>KD-Tree</td><td>0.0267</td><td>44.8130</td><td>485</td><td>57.8%</td><td>0.92</td></tr>
+    <tr align="center"><td>CBlucy</td><td>BigR</td><td>KD-Tree</td><td>0.1120</td><td>27.4374</td><td>1963</td><td>99.6%</td><td>12.70</td></tr>
+
+    <tr align="center"><td>CBdragon</td><td>Baseline</td><td>N/A</td><td>N/A</td><td>29.2821</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
+    <tr align="center"><td>CBdragon</td><td>Normal</td><td>Linear</td><td>0.0822</td><td>65.2398</td><td>2075</td><td>94.9%</td><td>3.85</td></tr>
+    <tr align="center"><td>CBdragon</td><td>LowN</td><td>Linear</td><td>0.0204</td><td>37.7279</td><td>524</td><td>59.0%</td><td>0.95</td></tr>
+    <tr align="center"><td>CBdragon</td><td>BigR</td><td>Linear</td><td>0.0812</td><td>41.1863</td><td>2075</td><td>99.8%</td><td>13.20</td></tr>
+    <tr align="center"><td>CBdragon</td><td>Normal</td><td>KD-Tree</td><td>0.0775</td><td>39.7878</td><td>2075</td><td>94.9%</td><td>3.85</td></tr>
+    <tr align="center"><td>CBdragon</td><td>LowN</td><td>KD-Tree</td><td>0.0219</td><td>41.5095</td><td>524</td><td>59.1%</td><td>0.95</td></tr>
+    <tr align="center"><td>CBdragon</td><td>BigR</td><td>KD-Tree</td><td>0.0884</td><td>29.5702</td><td>2075</td><td>99.8%</td><td>13.20</td></tr>
   </table>
 </div>
 
 <p>
-  The current photon-mapping implementation is slower than the baseline path tracer on these settings, which is expected for the present stage of the project. First, it introduces an explicit photon-build pass before rendering begins. Second, the photon map is currently queried with a linear scan rather than an accelerated nearest-neighbor data structure such as a kd-tree. Third, the renderer uses a hybrid strategy and may still fall back to recursive path tracing when the photon estimate is weak, so it can end up paying part of the cost of both methods. Even so, the timing and gather statistics are useful because they reveal how the renderer behaves as the photon count and gather radius change. In particular, reducing the photon count lowers the stored-photon count and the gather hit rate, while increasing the gather radius raises the number of photons used in each query but also tends to oversmooth the result.
+  The timing results show three main patterns. First, the baseline Project 3 path tracer remains faster than the photon-mapping renderer, which is expected because photon mapping adds a precomputation pass and an indirect-light gather stage. Second, the kd-tree substantially improves the performance of the query-heavy photon configurations, especially the normal and large-radius settings. For example, on CBbunny the normal photon setting drops from 66.4687 seconds with linear scan to 36.0601 seconds with the kd-tree, and on CBlucy the same setting drops from 93.4634 seconds to 49.6789 seconds. Third, the kd-tree is not uniformly dominant in every sparse case. In very low-photon configurations, where there are few stored photons to query in the first place, the kd-tree overhead can become less worthwhile, and one scene in this matrix even shows a slight slowdown.
+</p>
+
+<h3>
+  Analyze the effect of kd-tree acceleration.
+</h3>
+<p>
+  The most important observation about the kd-tree is that it changes performance much more than image quality. For a fixed photon configuration, the stored-photon count, gather hit rate, and average photons per query remain essentially unchanged between the linear-scan and kd-tree versions. This is exactly what we want from an acceleration structure: it should preserve the estimator while reducing the cost of finding nearby photons. In this experiment, the kd-tree is most valuable when the photon map is dense or the gather radius is large, because those are the settings where nearby-photon queries become expensive enough for spatial pruning to matter.
+</p>
+<p>
+  Overall, I would describe this project as a working photon-mapping extension built on top of the Project 3 path tracer, together with a practical kd-tree acceleration for photon-map queries. The image comparisons show that the photon-mapping renderer preserves the main visual structure of the baseline while introducing the expected density-estimation tradeoffs. The parameter sweep shows how photon count and gather radius affect stability and artifacts, and the timing study shows that kd-tree acceleration makes the heavier photon-mapping settings much more practical.
 </p>
 <br>
 
-<h3>
-  Supporting implementation work.
-</h3>
-<p>
-  In addition to photon mapping itself, I completed several renderer improvements that were necessary to make the experimental comparisons meaningful. I implemented missing advanced BSDF components for mirror, refraction, glass, and microfacet materials so that reflective and refractive Cornell Box scenes would render correctly in the baseline renderer. I also integrated Russian roulette into the recursive indirect path-tracing branch, which improved consistency between the baseline path tracer and the photon-mapping fallback branch. These supporting changes are not separate challenge claims by themselves, but they were important to make the photon-mapping comparisons technically valid.
-</p>
-<br>
-
-<h3>
-  Bidirectional path tracing (in progress).
-</h3>
-<p>
-  In parallel with photon mapping, I am also working on bidirectional path tracing as a second advanced rendering technique. At the moment this is still in progress rather than complete. My current plan is to construct camera and light subpaths separately and then connect them to evaluate additional transport paths that ordinary path tracing samples inefficiently. For now, photon mapping is the completed Challenge Level 3 technique in this project, while BDPT is the next major system I am building.
-</p>
-<br>
 
 
 </body>

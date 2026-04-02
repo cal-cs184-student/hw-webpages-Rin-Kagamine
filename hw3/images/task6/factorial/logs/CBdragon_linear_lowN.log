@@ -1,0 +1,41 @@
+[PathTracer] Input scene file: E:\newProjects\CS284E\hw3-pathtracer-oliveira3-photon\dae\sky\CBdragon.dae
+[COLLADA Parser] Loading COLLADA file...
+[COLLADA Parser] Loading scene...
+[COLLADA Parser]  |- Node: Camera (id:Camera)
+[COLLADA Parser]   |- CameraInfo: Camera.003 (id: Camera-camera) [ hfov=49.1343 vfov=28.8415 nclip=0.1 fclip=100 ]
+[COLLADA Parser]  |- Node: Area (id:Area)
+[COLLADA Parser]   |- LightInfo: Light (id:Area-light) [ type=area spectrum=(10,10,10) direction=(0,0,-1) ]
+[COLLADA Parser]  |- Node: ceiling (id:ceiling)
+[COLLADA Parser]   |- PolymeshInfo: ceiling (id:ceiling-mesh) [ num_polygons=2 num_vertices=4 num_normals=2 num_texcoords=6 ]
+[COLLADA Parser]   |- MaterialInfo: ceiling (id:ceiling-material) [ BSDF=0000014EE476A890 ]
+[COLLADA Parser]  |- Node: light (id:light)
+[COLLADA Parser]   |- PolymeshInfo: light (id:light-mesh) [ num_polygons=2 num_vertices=4 num_normals=2 num_texcoords=6 ]
+[COLLADA Parser]   |- MaterialInfo: light (id:light-material) [ BSDF=0000014EE476A3B0 ]
+[COLLADA Parser]  |- Node: floor (id:floor)
+[COLLADA Parser]   |- PolymeshInfo: floor (id:floor-mesh) [ num_polygons=2 num_vertices=4 num_normals=2 num_texcoords=6 ]
+[COLLADA Parser]   |- MaterialInfo: floor (id:floor-material) [ BSDF=0000014EE476AB90 ]
+[COLLADA Parser]  |- Node: leftWall (id:leftWall)
+[COLLADA Parser]   |- PolymeshInfo: leftWall (id:leftWall-mesh) [ num_polygons=2 num_vertices=4 num_normals=2 num_texcoords=6 ]
+[COLLADA Parser]   |- MaterialInfo: leftWall (id:leftWall-material) [ BSDF=0000014EE476A770 ]
+[COLLADA Parser]  |- Node: rightWall (id:rightWall)
+[COLLADA Parser]   |- PolymeshInfo: rightWall (id:rightWall-mesh) [ num_polygons=2 num_vertices=4 num_normals=2 num_texcoords=6 ]
+[COLLADA Parser]   |- MaterialInfo: rightWall (id:rightWall-material) [ BSDF=0000014EE476AD70 ]
+[COLLADA Parser]  |- Node: backWall (id:backWall)
+[COLLADA Parser]   |- PolymeshInfo: backWall (id:backWall-mesh) [ num_polygons=2 num_vertices=4 num_normals=2 num_texcoords=6 ]
+[COLLADA Parser]   |- MaterialInfo: backWall (id:backWall-material) [ BSDF=0000014EE476ADD0 ]
+[COLLADA Parser]  |- Node: dragon (id:dragon)
+[COLLADA Parser]   |- PolymeshInfo: dragon (id:dragon-mesh) [ num_polygons=100000 num_vertices=50000 num_normals=100000 num_texcoords=0 ]
+[COLLADA Parser]   |- MaterialInfo: dragon (id:dragon-material) [ BSDF=0000014EE6FC6C90 ]
+[PathTracer] Rendering using 8 threads
+[PathTracer] Collecting primitives... Done! (0.0207 sec)
+[PathTracer] Building BVH from 100012 primitives... Done! (0.1387 sec)
+[PhotonMap] Building photon map: target=16384, radius=0.1000, max_bounces=4...
+[PhotonMap] Build complete. supported_lights=1 skipped_lights=0 emitted=16384 stored=524 missed=2838 absorbed=78 rr_terminated=13466 query=linear-scan time=0.0204 sec.
+[PhotonMap] Render config. stored=524 radius=0.1000 max_bounces=4 query=linear-scan mode=diffuse-indirect-gather fallback=path-tracing.
+[PathTracer] Rendering... [PathTracer] Rendering... 1%[PathTracer] Rendering... 2%[PathTracer] Rendering... 3%[PathTracer] Rendering... 4%[PathTracer] Rendering... 5%[PathTracer] Rendering... 6%[PathTracer] Rendering... 7%[PathTracer] Rendering... 9%[PathTracer] Rendering... 10%[PathTracer] Rendering... 11%[PathTracer] Rendering... 12%[PathTracer] Rendering... 13%[PathTracer] Rendering... 14%[PathTracer] Rendering... 15%[PathTracer] Rendering... 17%[PathTracer] Rendering... 18%[PathTracer] Rendering... 19%[PathTracer] Rendering... 20%[PathTracer] Rendering... 21%[PathTracer] Rendering... 22%[PathTracer] Rendering... 23%[PathTracer] Rendering... 25%[PathTracer] Rendering... 26%[PathTracer] Rendering... 27%[PathTracer] Rendering... 28%[PathTracer] Rendering... 29%[PathTracer] Rendering... 30%[PathTracer] Rendering... 31%[PathTracer] Rendering... 32%[PathTracer] Rendering... 34%[PathTracer] Rendering... 35%[PathTracer] Rendering... 36%[PathTracer] Rendering... 37%[PathTracer] Rendering... 38%[PathTracer] Rendering... 39%[PathTracer] Rendering... 40%[PathTracer] Rendering... 42%[PathTracer] Rendering... 43%[PathTracer] Rendering... 44%[PathTracer] Rendering... 45%[PathTracer] Rendering... 46%[PathTracer] Rendering... 47%[PathTracer] Rendering... 48%[PathTracer] Rendering... 50%[PathTracer] Rendering... 51%[PathTracer] Rendering... 52%[PathTracer] Rendering... 53%[PathTracer] Rendering... 54%[PathTracer] Rendering... 55%[PathTracer] Rendering... 56%[PathTracer] Rendering... 57%[PathTracer] Rendering... 59%[PathTracer] Rendering... 60%[PathTracer] Rendering... 61%[PathTracer] Rendering... 62%[PathTracer] Rendering... 63%[PathTracer] Rendering... 64%[PathTracer] Rendering... 65%[PathTracer] Rendering... 67%[PathTracer] Rendering... 68%[PathTracer] Rendering... 69%[PathTracer] Rendering... 70%[PathTracer] Rendering... 71%[PathTracer] Rendering... 72%[PathTracer] Rendering... 73%[PathTracer] Rendering... 75%[PathTracer] Rendering... 76%[PathTracer] Rendering... 77%[PathTracer] Rendering... 78%[PathTracer] Rendering... 79%[PathTracer] Rendering... 80%[PathTracer] Rendering... 81%[PathTracer] Rendering... 82%[PathTracer] Rendering... 84%[PathTracer] Rendering... 85%[PathTracer] Rendering... 86%[PathTracer] Rendering... 87%[PathTracer] Rendering... 88%[PathTracer] Rendering... 89%[PathTracer] Rendering... 90%[PathTracer] Saving to file: E:\newProjects\CS284E\hw3-pathtracer-oliveira3-photon\docs\images\task6\factorial\CBdragon_linear_lowN.png... Done!
+[PathTracer] Rendering... 100%! (37.7279s)
+[PathTracer] BVH traced 209125818 rays.
+[PathTracer] Average speed 5.5430 million rays per second.
+[PathTracer] Averaged 2.106200 intersection tests per ray.
+[PhotonMap] Render summary. stored=524 build_time=0.0204 sec query=linear-scan gather_queries=39925650 gather_hits=23573010 hit_rate=59.0% gathered_photons=38046952 avg_per_query=0.95 avg_per_hit=1.61 max_in_query=8 fallback_indirect=45847657.
+[PathTracer] Job completed.
