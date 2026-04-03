@@ -787,7 +787,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   I chose these scenes because all three contain large diffuse Cornell Box surfaces, and my current photon gather is applied only on diffuse receivers. In the loader, ordinary phong and lambert materials are converted into <code>DiffuseBSDF</code>, so the walls, floor, and ceiling of these scenes are all valid photon-gather surfaces. CBbunny is the clearest diffuse case because the bunny itself is also diffuse. CBspheres_lambertian is similarly useful because the two spheres and the surrounding box are also treated as diffuse receivers in the current renderer. CBdragon remains useful for contrast: although the dragon itself is mirror, the surrounding Cornell Box is still largely diffuse, which makes it possible to observe photon-based indirect illumination on the environment while the non-diffuse object itself is still handled by the original recursive path tracer.
 </p>
 <p>
-  One important detail is that the baseline path tracer does not use the photon map at all. Because of that, there is no meaningful “baseline with linear scan” versus “baseline with kd-tree” distinction. The kd-tree only matters when photon mapping is enabled. For that reason, the final main experiment matrix contains 45 primary renders rather than 48: each of the three scenes has one baseline image plus fourteen photon-mapping images corresponding to seven photon configurations crossed with two photon-query modes. In addition, I ran one bonus bunny experiment with 15x the original normal photon count using kd-tree queries only.
+  One important detail is that the baseline path tracer does not use the photon map at all. Because of that, there is no meaningful “baseline with linear scan” versus “baseline with kd-tree” distinction. The kd-tree only matters when photon mapping is enabled. For that reason, the final main experiment matrix contains 45 primary renders: each of the three scenes has one baseline image plus fourteen photon-mapping images corresponding to seven photon configurations crossed with two photon-query modes. In addition, I ran two extra bunny validation renders with kd-tree queries only.
 </p>
 <p>
   Unless otherwise noted, all renders used the same main rendering settings: 8 threads, 256 camera samples per pixel, 4 light samples, maximum ray depth 5, and output resolution 320 by 240. The photon configurations were:
@@ -809,7 +809,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   Show the image comparisons.
 </h3>
 <p>
-  To keep the presentation readable, I show the full seven-level matrix for both query modes below, followed by one extra bonus bunny comparison.
+  To keep the presentation readable, I split each query mode into two four-column grids.
 </p>
 
 <div align="middle">
@@ -819,40 +819,54 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
       <th><b>LowN</b></th>
       <th><b>MidN</b></th>
       <th><b>HighN</b></th>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial_7levels/CBbunny_baseline.png" align="middle" width="180px"/><figcaption>CBbunny baseline</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_linear_lowN.png" align="middle" width="180px"/><figcaption>CBbunny linear LowN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_linear_midN.png" align="middle" width="180px"/><figcaption>CBbunny linear MidN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_linear_highN.png" align="middle" width="180px"/><figcaption>CBbunny linear HighN</figcaption></td>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_baseline.png" align="middle" width="180px"/><figcaption>CBspheres baseline</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_lowN.png" align="middle" width="180px"/><figcaption>CBspheres linear LowN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_midN.png" align="middle" width="180px"/><figcaption>CBspheres linear MidN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_highN.png" align="middle" width="180px"/><figcaption>CBspheres linear HighN</figcaption></td>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial_7levels/CBdragon_baseline.png" align="middle" width="180px"/><figcaption>CBdragon baseline</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_linear_lowN.png" align="middle" width="180px"/><figcaption>CBdragon linear LowN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_linear_midN.png" align="middle" width="180px"/><figcaption>CBdragon linear MidN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_linear_highN.png" align="middle" width="180px"/><figcaption>CBdragon linear HighN</figcaption></td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
       <th><b>HighN LowRad</b></th>
       <th><b>SuperHighN</b></th>
       <th><b>SuperHighN LowRad</b></th>
       <th><b>SuperHighN SuperLowRad</b></th>
     </tr>
     <tr align="center">
-      <td><img src="images/task6/factorial_7levels/CBbunny_baseline.png" align="middle" width="105px"/><figcaption>CBbunny baseline</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_linear_lowN.png" align="middle" width="105px"/><figcaption>CBbunny linear LowN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_linear_midN.png" align="middle" width="105px"/><figcaption>CBbunny linear MidN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_linear_highN.png" align="middle" width="105px"/><figcaption>CBbunny linear HighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_linear_highN_lowRad.png" align="middle" width="105px"/><figcaption>CBbunny linear HighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_linear_superhighN.png" align="middle" width="105px"/><figcaption>CBbunny linear SuperHighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_linear_superhighN_lowRad.png" align="middle" width="105px"/><figcaption>CBbunny linear SuperHighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_linear_superhighN_superlowRad.png" align="middle" width="105px"/><figcaption>CBbunny linear SuperHighN SuperLowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_linear_highN_lowRad.png" align="middle" width="180px"/><figcaption>CBbunny linear HighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_linear_superhighN.png" align="middle" width="180px"/><figcaption>CBbunny linear SuperHighN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_linear_superhighN_lowRad.png" align="middle" width="180px"/><figcaption>CBbunny linear SuperHighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_linear_superhighN_superlowRad.png" align="middle" width="180px"/><figcaption>CBbunny linear SuperHighN SuperLowRad</figcaption></td>
     </tr>
     <tr align="center">
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_baseline.png" align="middle" width="105px"/><figcaption>CBspheres_lambertian baseline</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_lowN.png" align="middle" width="105px"/><figcaption>CBspheres linear LowN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_midN.png" align="middle" width="105px"/><figcaption>CBspheres linear MidN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_highN.png" align="middle" width="105px"/><figcaption>CBspheres linear HighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_highN_lowRad.png" align="middle" width="105px"/><figcaption>CBspheres linear HighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_superhighN.png" align="middle" width="105px"/><figcaption>CBspheres linear SuperHighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_superhighN_lowRad.png" align="middle" width="105px"/><figcaption>CBspheres linear SuperHighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_superhighN_superlowRad.png" align="middle" width="105px"/><figcaption>CBspheres linear SuperHighN SuperLowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_highN_lowRad.png" align="middle" width="180px"/><figcaption>CBspheres linear HighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_superhighN.png" align="middle" width="180px"/><figcaption>CBspheres linear SuperHighN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_superhighN_lowRad.png" align="middle" width="180px"/><figcaption>CBspheres linear SuperHighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_linear_superhighN_superlowRad.png" align="middle" width="180px"/><figcaption>CBspheres linear SuperHighN SuperLowRad</figcaption></td>
     </tr>
     <tr align="center">
-      <td><img src="images/task6/factorial_7levels/CBdragon_baseline.png" align="middle" width="105px"/><figcaption>CBdragon baseline</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_linear_lowN.png" align="middle" width="105px"/><figcaption>CBdragon linear LowN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_linear_midN.png" align="middle" width="105px"/><figcaption>CBdragon linear MidN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_linear_highN.png" align="middle" width="105px"/><figcaption>CBdragon linear HighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_linear_highN_lowRad.png" align="middle" width="105px"/><figcaption>CBdragon linear HighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_linear_superhighN.png" align="middle" width="105px"/><figcaption>CBdragon linear SuperHighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_linear_superhighN_lowRad.png" align="middle" width="105px"/><figcaption>CBdragon linear SuperHighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_linear_superhighN_superlowRad.png" align="middle" width="105px"/><figcaption>CBdragon linear SuperHighN SuperLowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_linear_highN_lowRad.png" align="middle" width="180px"/><figcaption>CBdragon linear HighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_linear_superhighN.png" align="middle" width="180px"/><figcaption>CBdragon linear SuperHighN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_linear_superhighN_lowRad.png" align="middle" width="180px"/><figcaption>CBdragon linear SuperHighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_linear_superhighN_superlowRad.png" align="middle" width="180px"/><figcaption>CBdragon linear SuperHighN SuperLowRad</figcaption></td>
     </tr>
   </table>
 </div>
@@ -865,40 +879,54 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
       <th><b>LowN</b></th>
       <th><b>MidN</b></th>
       <th><b>HighN</b></th>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial_7levels/CBbunny_baseline.png" align="middle" width="180px"/><figcaption>CBbunny baseline</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_lowN.png" align="middle" width="180px"/><figcaption>CBbunny kd LowN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_midN.png" align="middle" width="180px"/><figcaption>CBbunny kd MidN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_highN.png" align="middle" width="180px"/><figcaption>CBbunny kd HighN</figcaption></td>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_baseline.png" align="middle" width="180px"/><figcaption>CBspheres baseline</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_lowN.png" align="middle" width="180px"/><figcaption>CBspheres kd LowN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_midN.png" align="middle" width="180px"/><figcaption>CBspheres kd MidN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_highN.png" align="middle" width="180px"/><figcaption>CBspheres kd HighN</figcaption></td>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial_7levels/CBdragon_baseline.png" align="middle" width="180px"/><figcaption>CBdragon baseline</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_kd_lowN.png" align="middle" width="180px"/><figcaption>CBdragon kd LowN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_kd_midN.png" align="middle" width="180px"/><figcaption>CBdragon kd MidN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_kd_highN.png" align="middle" width="180px"/><figcaption>CBdragon kd HighN</figcaption></td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
       <th><b>HighN LowRad</b></th>
       <th><b>SuperHighN</b></th>
       <th><b>SuperHighN LowRad</b></th>
       <th><b>SuperHighN SuperLowRad</b></th>
     </tr>
     <tr align="center">
-      <td><img src="images/task6/factorial_7levels/CBbunny_baseline.png" align="middle" width="105px"/><figcaption>CBbunny baseline</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_kd_lowN.png" align="middle" width="105px"/><figcaption>CBbunny kd LowN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_kd_midN.png" align="middle" width="105px"/><figcaption>CBbunny kd MidN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_kd_highN.png" align="middle" width="105px"/><figcaption>CBbunny kd HighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_kd_highN_lowRad.png" align="middle" width="105px"/><figcaption>CBbunny kd HighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_kd_superhighN.png" align="middle" width="105px"/><figcaption>CBbunny kd SuperHighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_kd_superhighN_lowRad.png" align="middle" width="105px"/><figcaption>CBbunny kd SuperHighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBbunny_kd_superhighN_superlowRad.png" align="middle" width="105px"/><figcaption>CBbunny kd SuperHighN SuperLowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_highN_lowRad.png" align="middle" width="180px"/><figcaption>CBbunny kd HighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_superhighN.png" align="middle" width="180px"/><figcaption>CBbunny kd SuperHighN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_superhighN_lowRad.png" align="middle" width="180px"/><figcaption>CBbunny kd SuperHighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_superhighN_superlowRad.png" align="middle" width="180px"/><figcaption>CBbunny kd SuperHighN SuperLowRad</figcaption></td>
     </tr>
     <tr align="center">
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_baseline.png" align="middle" width="105px"/><figcaption>CBspheres_lambertian baseline</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_lowN.png" align="middle" width="105px"/><figcaption>CBspheres kd LowN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_midN.png" align="middle" width="105px"/><figcaption>CBspheres kd MidN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_highN.png" align="middle" width="105px"/><figcaption>CBspheres kd HighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_highN_lowRad.png" align="middle" width="105px"/><figcaption>CBspheres kd HighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_superhighN.png" align="middle" width="105px"/><figcaption>CBspheres kd SuperHighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_superhighN_lowRad.png" align="middle" width="105px"/><figcaption>CBspheres kd SuperHighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_superhighN_superlowRad.png" align="middle" width="105px"/><figcaption>CBspheres kd SuperHighN SuperLowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_highN_lowRad.png" align="middle" width="180px"/><figcaption>CBspheres kd HighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_superhighN.png" align="middle" width="180px"/><figcaption>CBspheres kd SuperHighN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_superhighN_lowRad.png" align="middle" width="180px"/><figcaption>CBspheres kd SuperHighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBspheres_lambertian_kd_superhighN_superlowRad.png" align="middle" width="180px"/><figcaption>CBspheres kd SuperHighN SuperLowRad</figcaption></td>
     </tr>
     <tr align="center">
-      <td><img src="images/task6/factorial_7levels/CBdragon_baseline.png" align="middle" width="105px"/><figcaption>CBdragon baseline</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_kd_lowN.png" align="middle" width="105px"/><figcaption>CBdragon kd LowN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_kd_midN.png" align="middle" width="105px"/><figcaption>CBdragon kd MidN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_kd_highN.png" align="middle" width="105px"/><figcaption>CBdragon kd HighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_kd_highN_lowRad.png" align="middle" width="105px"/><figcaption>CBdragon kd HighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_kd_superhighN.png" align="middle" width="105px"/><figcaption>CBdragon kd SuperHighN</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_kd_superhighN_lowRad.png" align="middle" width="105px"/><figcaption>CBdragon kd SuperHighN LowRad</figcaption></td>
-      <td><img src="images/task6/factorial_7levels/CBdragon_kd_superhighN_superlowRad.png" align="middle" width="105px"/><figcaption>CBdragon kd SuperHighN SuperLowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_kd_highN_lowRad.png" align="middle" width="180px"/><figcaption>CBdragon kd HighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_kd_superhighN.png" align="middle" width="180px"/><figcaption>CBdragon kd SuperHighN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_kd_superhighN_lowRad.png" align="middle" width="180px"/><figcaption>CBdragon kd SuperHighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBdragon_kd_superhighN_superlowRad.png" align="middle" width="180px"/><figcaption>CBdragon kd SuperHighN SuperLowRad</figcaption></td>
     </tr>
   </table>
 </div>
@@ -927,31 +955,63 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   Across all three scenes, the baseline and photon-mapped renders preserve the same large-scale structure. The Cornell Box layout, object silhouettes, and overall illumination balance remain recognizable, even after the photon-map contribution becomes much denser. This is clearest in CBbunny and CBspheres_lambertian, where the main objects themselves are diffuse receivers and therefore directly participate in the photon gather. CBdragon is still useful because the mirror dragon itself continues to be handled by the original recursive path tracer, while the diffuse Cornell Box walls still show the behavior of the photon-density estimator.
 </p>
 <p>
-  The current logs do not directly report the exact fraction of purely photon-only indirect shading, so I interpret the estimator density using the gather hit rate, the average accepted photons per query, the average accepted photons per hit, and the maximum photons observed in any single query. This is important because a gather “hit” only means that at least one accepted photon was found after filtering; it does not automatically mean that the gather was strong enough to fully replace recursive path tracing.
+  One important limitation of the current implementation is that the code does not trust a photon estimate unless at least 6 accepted photons remain after filtering. This threshold matters a lot when interpreting the tables. In the MidN-like regimes, the average accepted photons per query is usually still only around 3.5 to 4.0, and the average accepted photons per hit is only around 4.0. That means many queries still do not cross the acceptance threshold, so these settings are still dominated mainly by recursive path tracing, with photon mapping contributing only in a subset of diffuse regions. In other words, a gather “hit” does not mean that the renderer fully switched to photon mapping; in many cases the result is still fallback or blending.
 </p>
 <p>
-  The LowN setting is the most conservative. In all three scenes it stays visually closest to the baseline, but the table shows why: the photon estimator is simply much weaker. For example, in CBspheres_lambertian with linear scan, the hit rate drops to 53.1% and the average photons per query drops to only 0.88 in LowN. Similar behavior appears in CBbunny and CBdragon, where the averages remain below 1 photon per query. That means the renderer has much less usable photon information available during indirect diffuse estimation, so the result remains strongly hybrid and closer to recursive path tracing.
+  The LowN setting is the most conservative. In all three scenes it stays visually closest to the baseline, and the statistics show why: the photon estimator is simply very weak. For example, in CBspheres_lambertian with linear scan, the hit rate drops to 53.1% and the average photons per query drops to only 0.88 in LowN. Similar behavior appears in CBbunny and CBdragon, where the averages also remain below 1 photon per query. In practice this means the renderer has much less usable photon information available during indirect diffuse estimation, so the result remains strongly path-tracing-dominated.
 </p>
 <p>
-  The MidN setting is the first configuration where photon mapping contributes more broadly, but it is still fairly sparse. Across the three scenes, MidN produces roughly 3.45 to 3.85 accepted photons per query on average. This is enough to visibly influence indirect diffuse regions, but not enough to make the photon estimate fully dominant in most places. The images still preserve the baseline look fairly well, although faint circular wall artifacts are already visible.
+  The MidN setting is the first configuration where photon mapping becomes visibly noticeable, but it is still fairly sparse. Across the three scenes, MidN produces roughly 3.45 to 3.85 accepted photons per query and roughly 3.72 to 4.06 accepted photons per hit. This is enough to influence diffuse walls and objects, but not enough to make the photon estimate dominant in most places. The images still preserve the baseline look fairly well, although faint circular wall artifacts are already visible.
 </p>
 <p>
-  HighN at the original radius is where the photon estimator becomes obviously dense. In all three scenes, the average photons per query jumps to roughly 10 to 11, and the maximum photons per query reaches the cap of 24. This is exactly where the large translucent circular wall artifacts become much stronger. In other words, raising the photon count at the same radius does not simply make the image “better”; it makes the density estimator much stronger and also makes the kernel-shaped artifacts much more obvious.
+  HighN at the original radius is where the photon estimator becomes obviously dense. In all three scenes, the average photons per query jumps to roughly 10 to 11, the average photons per hit is also around 10 to 11, and the maximum photons per query reaches the cap of 24. This is exactly where the large translucent circular wall artifacts become much stronger. In other words, raising the photon count at the same radius does not simply improve the result; it makes the density estimator much stronger and also makes the kernel-shaped artifacts much more obvious.
 </p>
 <p>
-  HighN LowRad is one of the most informative comparisons in the whole experiment. At HighN I keep the photon count tripled relative to MidN, but I reduce the radius to 0.10 / sqrt(3), which reduces the gather area to roughly one third of the original area. This pulls the average photons per query back down to about 3.8 to 4.1, which is very close to the MidN range. Visually, this substantially suppresses the oversized wall discs that appear in HighN at radius 0.10. This is a strong indication that the gather radius is controlling the spatial footprint of the artifact as much as the photon count is controlling the density.
+  HighN LowRad is one of the most informative comparisons in the whole experiment. At HighN I keep the photon count tripled relative to MidN, but I reduce the radius to 0.10 / sqrt(3), which reduces the gather area to roughly one third of the original area. This pulls the average photons per query back down to about 3.8 to 4.1, which is very close to the MidN range. Visually, this does suppress the oversized wall discs that appear in HighN at radius 0.10, but compared with MidN it also tends to reveal more small artifacts. My interpretation is that this setting trades a few large, obvious discs for a larger number of smaller and lighter discs. So the artifacts are not eliminated; their spatial footprint becomes smaller and less dominant.
 </p>
 <p>
-  SuperHighN at radius 0.10 is the strongest photon-driven regime. The average photons per query rises to about 15.9 in CBbunny, 16.23 in CBspheres_lambertian, and 17.42 in CBdragon, and the maximum photons per query saturates at 24 in every case. These images show the clearest and largest circular wall artifacts. They are useful because they make the density-estimation tradeoff extremely obvious: once the gather becomes very dense at a large radius, the photon-map contribution dominates but the spatial averaging becomes impossible to ignore.
+  SuperHighN at radius 0.10 is the strongest photon-driven regime. The average photons per query rises to about 15.9 in CBbunny, 16.23 in CBspheres_lambertian, and 17.42 in CBdragon, and the average photons per hit rises to about the same range. The maximum photons per query saturates at 24 in every case. These images show the clearest and largest circular wall artifacts. They are useful because they make the density-estimation tradeoff extremely obvious: once the gather becomes very dense at a large radius, the photon-map contribution becomes much stronger, but the spatial averaging becomes impossible to ignore.
 </p>
 <p>
-  SuperHighN LowRad is a useful compromise setting. Its average photons per query remains much higher than MidN, around 7.3 to 7.5, so the photon map still contributes strongly, but the artifact pattern is more controlled than in SuperHighN with radius 0.10. SuperHighN SuperLowRad pushes the estimator back down near the MidN / HighN LowRad range, with averages around 3.8. Visually, this suppresses the worst over-smoothing and the largest wall discs, but it also weakens the photon-map contribution again.
+  The most important visual comparison in the reduced-radius part of the experiment is between MidN, HighN LowRad, and SuperHighN SuperLowRad. These three configurations all end up with almost the same average accepted photons per query, around 3.8, and almost the same average accepted photons per hit, around 4.0. However, the images do not look identical. As the radius becomes smaller and the photon count becomes larger, the artifacts tend to become smaller, tighter, and visually lighter. There may be more of them, but each individual artifact is less dominant. I treat this as a hypothesis about how radius and photon density interact, and I test it further with one additional bunny experiment below.
 </p>
 <p>
-  The bonus bunny render is also informative. Even with 15x the original normal photon count and a reduced radius of 0.05, the image still shows strong photon-map influence and clearly visible density-estimation discs on the wall. The artifacts become denser and somewhat tighter than in the original SuperHighN radius-0.10 case, but they do not disappear. This suggests that increasing the photon count alone does not solve the kernel-shaped wall artifact problem once the estimator is strong enough; the radius still plays a central role.
+  SuperHighN LowRad is a useful intermediate setting. Its average photons per query remains much higher than MidN, around 7.3 to 7.5, and the average photons per hit is also about 7.5, so the photon map still contributes substantially. Visually it still shows more photon-map structure than MidN-like settings, but it is less extreme than SuperHighN at radius 0.10.
+</p>
+<p>
+  The bonus bunny render with 15x the original normal photon count and radius 0.05 is also informative. It still shows strong photon-map influence and clearly visible density-estimation discs on the wall. This suggests that increasing the photon count alone does not solve the kernel-shaped wall artifact problem once the estimator is strong enough; the radius still plays a central role. Overall, the images suggest a broad trend: as the average photons per hit rises, the photon-map artifacts generally become denser and more visually obvious.
 </p>
 <p>
   Comparing linear-scan photon mapping and kd-tree photon mapping, the images are effectively the same for matched photon parameters. This is the expected result. The kd-tree changes how nearby photons are found, but it does not change which photons are stored, how candidates are filtered, or how radiance is computed after the nearby set has been found. In this project, the kd-tree is a performance optimization rather than an image-quality change.
+</p>
+
+<h3>
+  Validation of the Radius-Density Hypothesis.
+</h3>
+<p>
+  To test the hypothesis more directly, I also ran one extra bunny experiment with kd-tree queries only, using 64x the MidN photon count and a much smaller radius of 0.0125. I do not include this image in the main factorial comparison grid, because it is meant as a validation case rather than part of the primary experiment matrix. However, I do include its timing and gather statistics in the main table.
+</p>
+
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <th><b>MidN</b></th>
+      <th><b>HighN LowRad</b></th>
+      <th><b>SuperHighN SuperLowRad</b></th>
+      <th><b>Bonus 64x MidN KD</b></th>
+    </tr>
+    <tr align="center">
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_midN.png" align="middle" width="180px"/><figcaption>CBbunny kd MidN</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_highN_lowRad.png" align="middle" width="180px"/><figcaption>CBbunny kd HighN LowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_superhighN_superlowRad.png" align="middle" width="180px"/><figcaption>CBbunny kd SuperHighN SuperLowRad</figcaption></td>
+      <td><img src="images/task6/factorial_7levels/CBbunny_kd_bonus64xmid_rad0125.png" align="middle" width="180px"/><figcaption>CBbunny kd 64x MidN, radius 0.0125</figcaption></td>
+    </tr>
+  </table>
+</div>
+<br>
+
+<p>
+  This extra comparison supports my hypothesis. MidN, HighN LowRad, SuperHighN SuperLowRad, and the 64x MidN test all end up in a very similar gather-density range, with average accepted photons per query around 3.8 to 4.0 and average accepted photons per hit around 4.0 to 4.2. Even so, the images do not look identical. As the photon count increases and the radius shrinks, the artifacts tend to become smaller, more tightly localized, and visually lighter. There may be more of them, but each one is less dominant. Subjectively, the overall visual impact is smaller. I think this is strong evidence that, even when the average gather density is held nearly constant, shrinking the radius still changes the spatial character of the artifacts.
 </p>
 
 <h3>
@@ -968,7 +1028,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   </table>
 </div>
 <p>
-  I still do not treat the sample-rate images as the main evidence for photon mapping, but they are useful for showing where the adaptive sampler sees residual instability. In the baseline rate image, the sampling effort is concentrated mainly around silhouettes and other strong image features. In the denser photon-map configurations, especially CBbunny linear SuperHighN, the sampler also spends noticeable effort on the large wall artifacts introduced by the density estimator. In the lower-radius variants, such as the CBspheres_lambertian and CBdragon examples shown here, those large wall regions become less dominant, which matches the visual impression that shrinking the kernel controls the spatial footprint of the artifacts.
+  I do not treat the sample-rate images as the main evidence for photon mapping, but they are useful for showing where the adaptive sampler thinks the image is still unstable. In the baseline image, the highest sample counts are concentrated mainly around silhouettes and other sharp geometric features. In the denser photon-map configurations, some wall regions also receive noticeably more samples, because the photon-gather artifacts themselves introduce extra local variance. When the gather radius is reduced, those wall regions usually become smaller and less dominant. This matches the visual impression that shrinking the kernel reduces the spatial footprint of the artifacts, even if it does not remove them completely.
 </p>
 
 <h3>
@@ -1010,6 +1070,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
     <tr align="center"><td>CBbunny</td><td>SuperHighN SuperLowRad</td><td>Linear</td><td>393216</td><td>0.040825</td><td>0.4262</td><td>357.6874</td><td>13750</td><td>95.4%</td><td>3.88</td><td>4.06</td><td>20</td></tr>
     <tr align="center"><td>CBbunny</td><td>SuperHighN SuperLowRad</td><td>KD-Tree</td><td>393216</td><td>0.040825</td><td>0.4720</td><td>38.2662</td><td>13750</td><td>95.4%</td><td>3.88</td><td>4.06</td><td>20</td></tr>
     <tr align="center"><td>CBbunny</td><td>Bonus 15x</td><td>KD-Tree</td><td>983040</td><td>0.05</td><td>1.1652</td><td>26.5384</td><td>34588</td><td>99.2%</td><td>13.07</td><td>13.17</td><td>24</td></tr>
+    <tr align="center"><td>CBbunny</td><td>Bonus 64x MidN</td><td>KD-Tree</td><td>4194304</td><td>0.0125</td><td>4.6593</td><td>39.8124</td><td>146078</td><td>95.8%</td><td>3.98</td><td>4.16</td><td>23</td></tr>
 
     <tr align="center"><td>CBspheres_lambertian</td><td>Baseline</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>27.5369</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
     <tr align="center"><td>CBspheres_lambertian</td><td>LowN</td><td>Linear</td><td>16384</td><td>0.10</td><td>0.0091</td><td>34.0644</td><td>564</td><td>53.1%</td><td>0.88</td><td>1.66</td><td>8</td></tr>
@@ -1056,7 +1117,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   The most important observation about the kd-tree is still that it changes performance much more than image quality. For a fixed photon configuration, the stored-photon count, hit rate, average photons per query, average photons per hit, and maximum photons in a query remain effectively unchanged between the linear-scan and kd-tree versions. That is exactly the behavior I wanted: the acceleration structure should preserve the estimator while reducing the cost of nearby-photon queries.
 </p>
 <p>
-  In this larger experiment matrix, the kd-tree is most useful in the dense HighN and SuperHighN settings, including the reduced-radius variants. Those are precisely the settings where there are many stored photons and many gather queries, so spatial pruning becomes much more valuable than a full scan over the photon array. The bonus bunny render was therefore run only with kd-tree acceleration, because at that photon count a linear scan would have been unnecessarily expensive for a result that should be visually equivalent.
+  In this larger experiment matrix, the kd-tree is most useful in the dense HighN and SuperHighN settings, including the reduced-radius variants. Those are precisely the settings where there are many stored photons and many gather queries, so spatial pruning becomes much more valuable than a full scan over the photon array. The bonus bunny renders were therefore run only with kd-tree acceleration, because at those photon counts a linear scan would have been unnecessarily expensive for a result that should be visually equivalent.
 </p>
 <p>
   Overall, this project is best understood as a course-project-scale photon-mapping extension built on top of the original Project 3 path tracer, together with a practical kd-tree acceleration for photon gathering. The expanded parameter sweep makes the tradeoff between photon density and gather radius much clearer than the earlier three-setting comparison: increasing the photon count strengthens the estimator, but shrinking the radius changes how much of that strength survives after spatial filtering. The resulting images and statistics make those interactions much easier to see and discuss.
