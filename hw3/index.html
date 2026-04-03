@@ -834,7 +834,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   Analyze image quality across the experiment.
 </h3>
 <p>
-  Across all three scenes, the baseline and photon-mapped renders preserve the same large-scale structure. The Cornell Box layout, object silhouettes, and overall illumination balance remain recognizable. This is clearest in CBbunny and CBlucy, where the normal photon-mapping setting stays visually close to the baseline. That is the main success criterion for this implementation: the photon map changes how indirect diffuse illumination is estimated, but it does not destroy the overall appearance of the original renderer.
+  Across all three scenes, the baseline and photon-mapped renders preserve the same large-scale structure. The Cornell Box layout, object silhouettes, and overall illumination balance remain recognizable. This is clearest in CBbunny and CBlucy, where the normal photon-mapping setting preserves the same large-scale structure as the baseline, although faint photon-related artifacts are still visible in some wall regions. That is the main success criterion for this implementation: the photon map changes how indirect diffuse illumination is estimated, but it does not destroy the overall appearance of the original renderer.
 </p>
 <p>
   The low-photon setting usually looks more conservative. In several images it appears slightly closer to the baseline than the normal photon setting does. However, this is mostly because the photon estimator becomes too sparse and the renderer falls back more often to recursive path tracing. In other words, the low-photon results can look safer not because the photon map is stronger, but because the photon map is contributing less.
