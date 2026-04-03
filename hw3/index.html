@@ -1028,7 +1028,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   </table>
 </div>
 <p>
-  I do not treat the sample-rate images as the main evidence for photon mapping, but they are useful for showing where the adaptive sampler thinks the image is still unstable. In the baseline image, the highest sample counts are concentrated mainly around silhouettes and other sharp geometric features. In the denser photon-map configurations, some wall regions also receive noticeably more samples, because the photon-gather artifacts themselves introduce extra local variance. When the gather radius is reduced, those wall regions usually become smaller and less dominant. This matches the visual impression that shrinking the kernel reduces the spatial footprint of the artifacts, even if it does not remove them completely.
+  I do not use the sample-rate images as the main evidence for photon mapping itself. Instead, I use them to see where the adaptive sampler thinks the image is hardest to converge. In the baseline render, the highest sample counts are concentrated mainly around silhouettes and other sharp geometric boundaries. In denser photon-map settings, some wall regions also attract more samples, because the photon-gather artifacts on those walls create additional local variance. When the gather radius is reduced, those high-sample wall regions usually shrink as well. This supports the same visual conclusion as the color images: reducing the radius does not remove the artifacts completely, but it does reduce how much image area they dominate.
 </p>
 
 <h3>
