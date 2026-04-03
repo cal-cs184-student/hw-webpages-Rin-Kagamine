@@ -66,7 +66,7 @@ In this project, I built a path tracer step by step, starting from basic camera 
 What I found especially enjoyable in this project was watching the renderer gradually become more complete. It felt genuinely fun to see the image improve one piece at a time: first geometry, then direct lighting, then multiple bounces, and finally adaptive sampling. In particular, it was very interesting to see the effect of indirect illumination so directly in the experiments. Comparing direct-only, indirect-only, and different bounce depths made interreflection much more intuitive to me than just reading the rendering equation on slides. Overall, this project turned a basic ray-scene intersection program into a practical Monte Carlo path tracer and made the connection between light transport theory and the final rendered image much clearer.
 </p>
 
-<h2 align="middle">Part 1: Ray Generation and Scene Intersection (20 Points)</h2>
+<h2 align="middle">Part 1: Ray Generation and Scene Intersection</h2>
 <!-- Walk through the ray generation and primitive intersection parts of the rendering pipeline.
 Explain the triangle intersection algorithm you implemented in your own words.
 Show images with normal shading for a few small .dae files. -->
@@ -127,7 +127,7 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
 <br>
 
 
-<h2 align="middle">Part 2: Bounding Volume Hierarchy (20 Points)</h2>
+<h2 align="middle">Part 2: Bounding Volume Hierarchy</h2>
 
 
 <p>
@@ -206,7 +206,7 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
 </p>
 
 
-<h2 align="middle">Part 3: Direct Illumination (20 Points)</h2>
+<h2 align="middle">Part 3: Direct Illumination</h2>
 
 <h3>
   Walk through both implementations of the direct lighting function.
@@ -352,7 +352,7 @@ For the full <code>intersect</code> function, after accepting a valid hit, I sto
   Using the same rendering parameters, light sampling was faster than uniform hemisphere sampling on all three scenes. The difference was especially large for CBempty.dae, where light sampling achieved more than a 5x speedup. This matches the behavior seen in the rendered images: hemisphere sampling wastes many samples on directions that do not contribute direct light, while light sampling draws samples directly from the lights and therefore uses its sample budget much more efficiently. In practice, this means light sampling not only produces cleaner and more stable direct illumination, but also reaches a useful result more quickly.
 </p>
 <br>
-<h2 align="middle">Part 4: Global Illumination (20 Points)</h2>
+<h2 align="middle">Part 4: Global Illumination</h2>
 
 <h3>
   Walk through your implementation of the indirect lighting function.
@@ -650,7 +650,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   The spatial distribution of the noise is also meaningful. Bright directly lit regions converge relatively quickly, while darker regions influenced more by indirect transport converge more slowly. This is expected, because indirect lighting is estimated recursively and therefore has higher variance than the direct term. Increasing spp reduces this variance by averaging more independent path samples per pixel, so the image gradually transitions from a noisy Monte Carlo estimate to a stable global illumination render.
 </p>
 <br>
-<h2 align="middle">Part 5: Adaptive Sampling (20 Points)</h2>
+<h2 align="middle">Part 5: Adaptive Sampling</h2>
 
 <h3>
   Explain adaptive sampling. Walk through your implementation of the adaptive sampling.
@@ -738,7 +738,13 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   I also changed photon tracing so that photons are not immediately absorbed when they hit non-diffuse materials. They may continue through mirror, glass, or other sampled BSDF interactions, but they are still only stored when they eventually land on diffuse surfaces. This preserves the intended role of the photon map in my implementation: storing indirect illumination primarily for diffuse gathering.
 </p>
 <p>
-  During the camera pass, the renderer preserves the original direct-lighting path and uses photon mapping only for indirect diffuse illumination. At a diffuse shading point, the renderer gathers nearby photons and estimates radiance using a density-estimation style formula. To make the estimate more stable, I do not simply average all photons inside a fixed radius. I filter candidates by surface-normal consistency, same-side direction checks, and a local plane-distance test. In the current code, I require at least six accepted photons before trusting the estimate, and I keep at most the nearest 24 accepted photons for the final density calculation. If too few photons remain after filtering, the renderer falls back to recursive path tracing. If the photon estimate is only partially reliable, I blend the photon estimate with the recursive path-traced result instead of hard-switching between them.
+  During the camera pass, the renderer preserves the original direct-lighting path and uses photon mapping only for indirect diffuse illumination. A photon gather is attempted only when photon mapping is enabled, the photon map is non-empty, the current BSDF is not delta, and the visible surface is diffuse. At a diffuse shading point, the renderer gathers nearby photons and estimates radiance using a density-estimation style formula. To make the estimate more stable, I do not simply average all photons inside a fixed radius. I filter candidates by surface-normal consistency, same-side direction checks, and a local plane-distance test. In the current code, if fewer than six photons remain after filtering, the photon estimate is rejected entirely and the renderer falls back to recursive path tracing for the whole indirect term.
+</p>
+<p>
+  If the gather succeeds, I sort the accepted photons by distance and keep at most the nearest 24 photons for the final density estimate. The renderer then computes a confidence value from the accepted photon count. With only the minimum acceptable count, the confidence is effectively 0 and the indirect result is fully taken from recursive path tracing. As the accepted photon count increases beyond 6, the photon estimate is blended with the path-traced indirect result. Once the gather reaches the target count of 24 photons or more, the confidence reaches 1 and the renderer uses the photon estimate directly without blending. In other words, the code has three practical cases: full fallback when the gather is too sparse, weighted blending when the gather is only moderately reliable, and pure photon-based indirect diffuse when the local photon density is strong enough.
+</p>
+<p>
+  More precisely, the blend weight is computed as <code>clamp((usedPhotonCount - 6) / (24 - 6), 0, 1)</code>.
 </p>
 <p>
   For photon gathering, I implemented two query modes. The first is a simple linear scan over the stored photon vector. The second is a balanced kd-tree built over the photon positions after the photon build pass finishes. The kd-tree uses median splits along the dominant axis of the current photon subset, and photon gathering performs recursive radius queries against this tree. I exposed this choice through a command-line flag so that I could directly compare linear-scan gathering and kd-tree gathering under exactly the same photon-mapping parameters.
@@ -759,6 +765,9 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
 </h3>
 <p>
   I designed the experiments around three variables: photon query structure, rendering configuration, and scene. The photon query structure had two settings: linear scan and kd-tree. The rendering configuration had four settings: the baseline Project 3 path tracer, photon mapping with a recommended setting, photon mapping with a reduced photon count, and photon mapping with a larger gather radius. The scene variable used three Cornell Box scenes: CBbunny, CBlucy, and CBdragon.
+</p>
+<p>
+  I chose these scenes because all three contain large diffuse Cornell Box surfaces, and my current photon gather is applied only on diffuse receivers. In the loader, ordinary phong and lambert materials are converted into <code>DiffuseBSDF</code>, so the walls, floor, and ceiling of these scenes are all valid photon-gather surfaces. CBbunny is the clearest diffuse case because the bunny itself is also diffuse. CBspheres_lambertian is similarly useful because the two spheres and the surrounding box are all treated as diffuse receivers in the current renderer. CBdragon is still useful for contrast: although the dragon itself is mirror, the surrounding Cornell Box remains largely diffuse, which makes it possible to observe photon-based indirect illumination on the environment while the non-diffuse object itself is still handled by the original recursive path tracer.
 </p>
 <p>
   One important detail is that the baseline path tracer does not use the photon map at all. Because of that, there is no meaningful “baseline with linear scan” versus “baseline with kd-tree” distinction. The kd-tree only matters when photon mapping is enabled. For that reason, the final experiment matrix contains 21 primary renders rather than 24: each of the three scenes has one baseline image plus six photon-mapping images corresponding to three parameter settings crossed with two photon-query modes.
@@ -785,10 +794,10 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
       <td><img src="images/task6/factorial/CBbunny_linear_bigR.png" align="middle" width="220px"/><figcaption>CBbunny linear bigR</figcaption></td>
     </tr>
     <tr align="center">
-      <td><img src="images/task6/factorial/CBlucy_baseline.png" align="middle" width="220px"/><figcaption>CBlucy baseline</figcaption></td>
-      <td><img src="images/task6/factorial/CBlucy_linear_normal.png" align="middle" width="220px"/><figcaption>CBlucy linear normal</figcaption></td>
-      <td><img src="images/task6/factorial/CBlucy_linear_lowN.png" align="middle" width="220px"/><figcaption>CBlucy linear lowN</figcaption></td>
-      <td><img src="images/task6/factorial/CBlucy_linear_bigR.png" align="middle" width="220px"/><figcaption>CBlucy linear bigR</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_baseline.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian baseline</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_linear_normal.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian linear normal</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_linear_lowN.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian linear lowN</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_linear_bigR.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian linear bigR</figcaption></td>
     </tr>
     <tr align="center">
       <td><img src="images/task6/factorial/CBdragon_baseline.png" align="middle" width="220px"/><figcaption>CBdragon baseline</figcaption></td>
@@ -815,10 +824,10 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
       <td><img src="images/task6/factorial/CBbunny_kd_bigR.png" align="middle" width="220px"/><figcaption>CBbunny kd bigR</figcaption></td>
     </tr>
     <tr align="center">
-      <td><img src="images/task6/factorial/CBlucy_baseline.png" align="middle" width="220px"/><figcaption>CBlucy baseline</figcaption></td>
-      <td><img src="images/task6/factorial/CBlucy_kd_normal.png" align="middle" width="220px"/><figcaption>CBlucy kd normal</figcaption></td>
-      <td><img src="images/task6/factorial/CBlucy_kd_lowN.png" align="middle" width="220px"/><figcaption>CBlucy kd lowN</figcaption></td>
-      <td><img src="images/task6/factorial/CBlucy_kd_bigR.png" align="middle" width="220px"/><figcaption>CBlucy kd bigR</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_baseline.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian baseline</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_kd_normal.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian kd normal</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_kd_lowN.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian kd lowN</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_kd_bigR.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian kd bigR</figcaption></td>
     </tr>
     <tr align="center">
       <td><img src="images/task6/factorial/CBdragon_baseline.png" align="middle" width="220px"/><figcaption>CBdragon baseline</figcaption></td>
@@ -834,13 +843,13 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   Analyze image quality across the experiment.
 </h3>
 <p>
-  Across all three scenes, the baseline and photon-mapped renders preserve the same large-scale structure. The Cornell Box layout, object silhouettes, and overall illumination balance remain recognizable. This is clearest in CBbunny and CBlucy, where the normal photon-mapping setting preserves the same large-scale structure as the baseline, although faint photon-related artifacts are still visible in some wall regions. That is the main success criterion for this implementation: the photon map changes how indirect diffuse illumination is estimated, but it does not destroy the overall appearance of the original renderer.
+  Across all three scenes, the baseline and photon-mapped renders preserve the same large-scale structure. The Cornell Box layout, object silhouettes, and overall illumination balance remain recognizable. This is clearest in CBbunny and CBspheres_lambertian, where the main objects themselves are diffuse receivers and the normal photon-mapping setting preserves the same large-scale structure as the baseline, although faint photon-related artifacts are still visible in some wall regions. That is the main success criterion for this implementation: the photon map changes how indirect diffuse illumination is estimated, but it does not destroy the overall appearance of the original renderer.
 </p>
 <p>
   The low-photon setting usually looks more conservative. In several images it appears slightly closer to the baseline than the normal photon setting does. However, this is mostly because the photon estimator becomes too sparse and the renderer falls back more often to recursive path tracing. In other words, the low-photon results can look safer not because the photon map is stronger, but because the photon map is contributing less.
 </p>
 <p>
-  The large-radius setting consistently shows the clearest artifacts. In CBbunny, the walls and ceiling develop larger translucent circular blotches, and the indirect lighting becomes more blurred. Similar behavior appears in CBlucy and CBdragon as well. This matches the usual density-estimation tradeoff: a larger gather radius makes the estimate more stable, but it also washes out local detail and increases visible spatial averaging artifacts.
+  The large-radius setting consistently shows the clearest artifacts. In CBbunny, the walls and ceiling develop larger translucent circular blotches, and the indirect lighting becomes more blurred. Similar behavior appears in CBspheres_lambertian and CBdragon as well. This matches the usual density-estimation tradeoff: a larger gather radius makes the estimate more stable, but it also washes out local detail and increases visible spatial averaging artifacts.
 </p>
 <p>
   Comparing linear-scan photon mapping and kd-tree photon mapping, the images are effectively the same for the same photon parameters. This is exactly what I would expect. The kd-tree changes how nearby photons are found, but it does not change which photons are stored, how candidates are filtered, or how radiance is computed once the nearby set has been identified. In this project, the kd-tree is a performance optimization rather than a quality change.
@@ -854,7 +863,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
     <tr align="center">
       <td><img src="images/task6/factorial/CBbunny_baseline_rate.png" align="middle" width="220px"/><figcaption>CBbunny baseline rate</figcaption></td>
       <td><img src="images/task6/factorial/CBbunny_linear_bigR_rate.png" align="middle" width="220px"/><figcaption>CBbunny linear bigR rate</figcaption></td>
-      <td><img src="images/task6/factorial/CBlucy_kd_normal_rate.png" align="middle" width="220px"/><figcaption>CBlucy kd normal rate</figcaption></td>
+      <td><img src="images/task6/factorial/CBspheres_lambertian_kd_normal_rate.png" align="middle" width="220px"/><figcaption>CBspheres_lambertian kd normal rate</figcaption></td>
       <td><img src="images/task6/factorial/CBdragon_kd_normal_rate.png" align="middle" width="220px"/><figcaption>CBdragon kd normal rate</figcaption></td>
     </tr>
   </table>
@@ -886,13 +895,13 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
     <tr align="center"><td>CBbunny</td><td>LowN</td><td>KD-Tree</td><td>0.0235</td><td>30.5964</td><td>564</td><td>54.4%</td><td>0.87</td></tr>
     <tr align="center"><td>CBbunny</td><td>BigR</td><td>KD-Tree</td><td>0.0739</td><td>29.9157</td><td>2213</td><td>97.7%</td><td>11.06</td></tr>
 
-    <tr align="center"><td>CBlucy</td><td>Baseline</td><td>N/A</td><td>N/A</td><td>41.1299</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
-    <tr align="center"><td>CBlucy</td><td>Normal</td><td>Linear</td><td>0.1075</td><td>93.4634</td><td>1963</td><td>93.6%</td><td>3.76</td></tr>
-    <tr align="center"><td>CBlucy</td><td>LowN</td><td>Linear</td><td>0.0305</td><td>53.3392</td><td>485</td><td>57.8%</td><td>0.92</td></tr>
-    <tr align="center"><td>CBlucy</td><td>BigR</td><td>Linear</td><td>0.1348</td><td>50.5829</td><td>1963</td><td>99.6%</td><td>12.70</td></tr>
-    <tr align="center"><td>CBlucy</td><td>Normal</td><td>KD-Tree</td><td>0.1341</td><td>49.6789</td><td>1963</td><td>93.6%</td><td>3.76</td></tr>
-    <tr align="center"><td>CBlucy</td><td>LowN</td><td>KD-Tree</td><td>0.0267</td><td>44.8130</td><td>485</td><td>57.8%</td><td>0.92</td></tr>
-    <tr align="center"><td>CBlucy</td><td>BigR</td><td>KD-Tree</td><td>0.1120</td><td>27.4374</td><td>1963</td><td>99.6%</td><td>12.70</td></tr>
+    <tr align="center"><td>CBspheres_lambertian</td><td>Baseline</td><td>N/A</td><td>N/A</td><td>27.5369</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
+    <tr align="center"><td>CBspheres_lambertian</td><td>Normal</td><td>Linear</td><td>0.0481</td><td>66.6733</td><td>2303</td><td>94.2%</td><td>3.77</td></tr>
+    <tr align="center"><td>CBspheres_lambertian</td><td>LowN</td><td>Linear</td><td>0.0091</td><td>34.0644</td><td>564</td><td>53.1%</td><td>0.88</td></tr>
+    <tr align="center"><td>CBspheres_lambertian</td><td>BigR</td><td>Linear</td><td>0.0381</td><td>45.3354</td><td>2303</td><td>98.8%</td><td>11.57</td></tr>
+    <tr align="center"><td>CBspheres_lambertian</td><td>Normal</td><td>KD-Tree</td><td>0.0374</td><td>32.5864</td><td>2303</td><td>94.2%</td><td>3.77</td></tr>
+    <tr align="center"><td>CBspheres_lambertian</td><td>LowN</td><td>KD-Tree</td><td>0.0106</td><td>28.3085</td><td>564</td><td>53.1%</td><td>0.88</td></tr>
+    <tr align="center"><td>CBspheres_lambertian</td><td>BigR</td><td>KD-Tree</td><td>0.0386</td><td>24.9906</td><td>2303</td><td>98.8%</td><td>11.57</td></tr>
 
     <tr align="center"><td>CBdragon</td><td>Baseline</td><td>N/A</td><td>N/A</td><td>29.2821</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
     <tr align="center"><td>CBdragon</td><td>Normal</td><td>Linear</td><td>0.0822</td><td>65.2398</td><td>2075</td><td>94.9%</td><td>3.85</td></tr>
@@ -905,7 +914,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
 </div>
 
 <p>
-  The timing results show three main patterns. First, the baseline Project 3 path tracer remains faster than the photon-mapping renderer overall, which is expected because photon mapping adds both a precomputation pass and an indirect-light gathering stage. Second, the kd-tree substantially improves the performance of the more query-heavy photon configurations, especially the normal and large-radius settings. For example, on CBbunny the normal photon setting drops from 66.4687 seconds with linear scan to 36.0601 seconds with the kd-tree, and on CBlucy the same setting drops from 93.4634 seconds to 49.6789 seconds. Third, the kd-tree is not uniformly dominant in every sparse case. When the photon map is very small, the linear scan is already cheap, and the kd-tree overhead can reduce or even eliminate the speed advantage.
+  The timing results show three main patterns. First, the baseline Project 3 path tracer remains faster than the photon-mapping renderer overall, which is expected because photon mapping adds both a precomputation pass and an indirect-light gathering stage. Second, the kd-tree substantially improves the performance of the more query-heavy photon configurations, especially the normal and large-radius settings. For example, on CBbunny the normal photon setting drops from 66.4687 seconds with linear scan to 36.0601 seconds with the kd-tree, and on CBspheres_lambertian the same setting drops from 66.6733 seconds to 32.5864 seconds. Third, the kd-tree is not uniformly dominant in every sparse case. When the photon map is very small, the linear scan is already cheap, and the kd-tree overhead can reduce or even eliminate the speed advantage.
 </p>
 
 <h3>
