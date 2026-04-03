@@ -692,7 +692,9 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
 <br>
 
 <h2 align="middle">Part 6: Extra Credit — Challenge Level 3 Photon Mapping with Challenge Level 2 KD-Tree Acceleration on the Photon Map</h2>
-
+<p>
+The source code for this part is back up at ./photon _mapping(for extra point)/hw3-pathtracer-oliveira3-photon/ and in another branch 
+</p>
 <h3>
   Introduce the algorithms.
 </h3>
@@ -716,7 +718,7 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   The first step was adding a photon data structure and a photon map container. Each photon stores its position, incoming direction, power, and the surface normal at the storage point. Before any camera rays are traced, the renderer now performs a photon build pass. In this pass, it scans the scene lights, selects supported emitters, launches a target number of photons, and traces them through the scene. In my implementation, photon emission currently supports point lights and area lights, which is sufficient for the Cornell Box scenes used in the experiments.
 </p>
 <p>
-  During photon tracing, the renderer recursively intersects each photon ray with the scene and updates the photon power using the usual throughput term involving the BSDF value, cosine factor, and sampling PDF. I terminate photon paths using Russian roulette. I do not store direct photons, because direct illumination is already handled by the original one-bounce direct-lighting estimator. Instead, I store photons only after at least one bounce, and only when they land on diffuse receivers. Because of this conservative storage rule, the number of stored photons is much smaller than the number of emitted photons. For example, in the normal configuration 65,536 photons are launched, but only a few thousand are stored, because direct photons are excluded, only diffuse receivers are accepted, and many paths terminate by miss events, emissive hits, or Russian roulette.
+  During photon tracing, the renderer recursively intersects each photon ray with the scene and updates the photon power using the usual throughput term involving the BSDF value, cosine factor, and sampling PDF. I terminate photon paths using Russian roulette. I do not store direct photons, because direct illumination is already handled by the original one-bounce direct-lighting estimator. Instead, I store photons only after at least one bounce, and only when they land on diffuse receivers. Because of this conservative storage rule, the number of stored photons is much smaller than the number of emitted photons. For example, in the normal configuration 65,536 photons are launched, but only around two thousand are stored in the final map, because direct photons are excluded, only diffuse receivers are accepted, and many paths terminate by miss events, emissive hits, or Russian roulette.
 </p>
 <p>
   I also changed photon tracing so that photons are not immediately absorbed when they hit non-diffuse materials. They may continue through mirror, glass, or other sampled BSDF interactions, but they are still only stored when they eventually land on diffuse surfaces. This preserves the intended role of the photon map in my implementation: storing indirect illumination primarily for diffuse gathering.
