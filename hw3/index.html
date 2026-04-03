@@ -1121,8 +1121,14 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
 <p>
   In this larger experiment matrix, the kd-tree is most useful in the dense HighN and SuperHighN settings, including the reduced-radius variants. Those are precisely the settings where there are many stored photons and many gather queries, so spatial pruning becomes much more valuable than a full scan over the photon array. The bonus bunny renders were therefore run only with kd-tree acceleration, because at those photon counts a linear scan would have been unnecessarily expensive for a result that should be visually equivalent.
 </p>
+<h3>
+  Conclusion and Limitation
+</h3>
 <p>
   Overall, this project is best understood as a course-project-scale photon-mapping extension built on top of the original Project 3 path tracer, together with a practical kd-tree acceleration for photon gathering. The expanded parameter sweep makes the tradeoff between photon density and gather radius much clearer than the earlier three-setting comparison: increasing the photon count strengthens the estimator, but shrinking the radius changes how much of that strength survives after spatial filtering. The resulting images and statistics make those interactions much easier to see and discuss.
+</p>
+<p>
+  The current implementation mainly targets indirect diffuse transport, and its quality is still sensitive to photon count and gather radius.
 </p>
 <br>
 
