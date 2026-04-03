@@ -769,6 +769,15 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
 </div>
 <br>
 <h3>
+  KD-tree implementation for photon queries.
+</h3>
+<p>
+  The photon map stores photons in a flat vector, and the kd-tree is built on top of that vector only when kd-tree mode is enabled. During the build pass, the code first creates an index array over the stored photons and then recursively partitions it. For each subrange, it computes the dominant spatial axis from the bounding extent of the photon positions, uses <code>std::nth_element</code> to place the median photon on that axis, and stores a kd-tree node containing the photon index, split axis, and the indices of the left and right child nodes. In the current implementation, the tree is built once after photon tracing finishes.
+</p>
+<p>
+  During a gather query, the code performs a recursive radius search over the kd-tree. At each node, it first checks whether the node’s photon lies within the gather radius. It then visits the nearer child first, based on which side of the splitting plane the query point lies on. The farther child is visited only if the squared distance from the query point to the splitting plane is less than or equal to the squared gather radius. If kd-tree mode is disabled, or if no tree has been built, the same nearby-photon query function falls back to a linear scan over the stored photon vector. This means the estimator itself stays the same, and only the neighborhood search strategy changes.
+</p>
+<h3>
   Experimental setup.
 </h3>
 <p>
@@ -851,10 +860,10 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   Analyze image quality across the experiment.
 </h3>
 <p>
-  Across all three scenes, the baseline and photon-mapped renders preserve the same large-scale structure. The Cornell Box layout, object silhouettes, and overall illumination balance remain recognizable. This is clearest in CBbunny and CBspheres_lambertian, where the main objects themselves are diffuse receivers and the normal photon-mapping setting preserves the same large-scale structure as the baseline, although faint photon-related artifacts are still visible in some wall regions. That is the main success criterion for this implementation: the photon map changes how indirect diffuse illumination is estimated, but it does not destroy the overall appearance of the original renderer.
+  Across all three scenes, the baseline and photon-mapped renders preserve the same large-scale structure. The Cornell Box layout, object silhouettes, and overall illumination balance remain recognizable. This is clearest in CBbunny and CBspheres_lambertian, where the main objects themselves are diffuse receivers and the normal photon-mapping setting preserves the same large-scale structure as the baseline, although faint photon-related artifacts are still visible in some wall regions. The current render logs do not record an exact percentage of purely photon-only indirect shading, but they do show that photon gather is used broadly in the normal settings: the gather hit rate is around 92% to 95% across the three scenes. At the same time, the average accepted photons per query is still modest, which means recursive path tracing remains active frequently through fallback or blending. In other words, the photon map is contributing meaningfully on diffuse regions, but the current implementation is still a hybrid estimator rather than a pure photon-only integrator.
 </p>
 <p>
-  The low-photon setting usually looks more conservative. In several images it appears slightly closer to the baseline than the normal photon setting does. However, this is mostly because the photon estimator becomes too sparse and the renderer falls back more often to recursive path tracing. In other words, the low-photon results can look safer not because the photon map is stronger, but because the photon map is contributing less.
+  The low-photon setting usually looks more conservative. In several images it appears slightly closer to the baseline than the normal photon setting does. However, this is mostly because the photon estimator becomes much sparser rather than because it becomes more accurate. In the logs, reducing the photon count lowers both the gather hit rate and the average accepted photons per query. For example, in CBspheres_lambertian with linear scan, the hit rate drops from 94.2% to 53.1%, and the average photons per query drops from 3.77 to 0.88 when the photon count is reduced from 65,536 to 16,384. This means the renderer has less useful photon information available during indirect diffuse estimation, so recursive path tracing contributes more often and the photon map contributes less strongly.
 </p>
 <p>
   The large-radius setting consistently shows the clearest artifacts. In CBbunny, the walls and ceiling develop larger translucent circular blotches, and the indirect lighting becomes more blurred. Similar behavior appears in CBspheres_lambertian and CBdragon as well. This matches the usual density-estimation tradeoff: a larger gather radius makes the estimate more stable, but it also washes out local detail and increases visible spatial averaging artifacts.
