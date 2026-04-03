@@ -1125,11 +1125,9 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
   Conclusion and Limitation
 </h3>
 <p>
-  Overall, this project is best understood as a course-project-scale photon-mapping extension built on top of the original Project 3 path tracer, together with a practical kd-tree acceleration for photon gathering. The expanded parameter sweep makes the tradeoff between photon density and gather radius much clearer than the earlier three-setting comparison: increasing the photon count strengthens the estimator, but shrinking the radius changes how much of that strength survives after spatial filtering. The resulting images and statistics make those interactions much easier to see and discuss.
+  Overall, this project is best understood as a course-project-scale photon-mapping extension built on top of the original Project 3 path tracer, together with a practical kd-tree acceleration for photon gathering. The expanded parameter sweep makes the tradeoff between photon density and gather radius much clearer than the earlier three-setting comparison: increasing the photon count strengthens the estimator, while shrinking the gather radius changes the size and visual dominance of the resulting artifacts. In the current implementation, photon mapping mainly affects indirect diffuse transport, and the renderer still behaves as a hybrid estimator in many settings rather than a pure photon-only integrator.
 </p>
-<p>
-  The current implementation mainly targets indirect diffuse transport, and its quality is still sensitive to photon count and gather radius.
-</p>
+
 <br>
 
 
