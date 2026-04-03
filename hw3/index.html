@@ -1030,7 +1030,9 @@ In the accumulated sequence, m = 0 again shows only emission, and m = 1 correspo
 <p>
   I do not use the sample-rate images as the main evidence for photon mapping itself. Instead, I use them to see where the adaptive sampler thinks the image is hardest to converge. In the baseline render, the highest sample counts are concentrated mainly around silhouettes and other sharp geometric boundaries. In denser photon-map settings, some wall regions also attract more samples, because the photon-gather artifacts on those walls create additional local variance. When the gather radius is reduced, those high-sample wall regions usually shrink as well. This supports the same visual conclusion as the color images: reducing the radius does not remove the artifacts completely, but it does reduce how much image area they dominate.
 </p>
-
+<p>
+  Overall, the current implementation mainly targets indirect diffuse transport, and its quality is still sensitive to photon count and gather radius.
+</p>
 <h3>
   Compare rendering times across all configurations.
 </h3>
