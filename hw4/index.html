@@ -35,18 +35,28 @@
 
 		<br>
 
-		Link to webpage: (TODO) <a href="https://cal-cs184-student.github.io/hw-webpages-Rin-Kagamine/hw4/">cs184.eecs.berkeley.edu/sp25</a>
+		Link to webpage: <a href="https://cal-cs184-student.github.io/hw-webpages-Rin-Kagamine/hw4/">cs184.eecs.berkeley.edu/sp25</a>
 
 		<br>
 
-		Link to GitHub repository: (TODO) <a href="https://github.com/cal-cs184-student/hw4-clothsim-oliveira4">cs184.eecs.berkeley.edu/sp25</a>
+		Link to GitHub repository: <a href="https://github.com/cal-cs184-student/hw4-clothsim-oliveira4">cs184.eecs.berkeley.edu/sp25</a>
 
 
 
 
-		<h2>Overview</h2>
-		Give a high-level overview of what you implemented in this homework. Think about what you've built as a whole. Share your thoughts on what interesting things you've learned from completing the homework.
+<h2>Overview</h2>
 
+<p>
+  In this homework, I built a cloth simulator step by step, starting from a mass-spring representation of cloth and extending it into a dynamic simulation with numerical integration, collision handling, self-collision, and GPU shader-based rendering. The cloth is represented as a grid of point masses connected by structural, shearing, and bending springs. I then used Verlet integration to update the point masses over time, added spring forces and damping, and applied Provot constraints to prevent springs from stretching too far.
+</p>
+
+<p>
+  After the basic simulation was working, I implemented collisions with spheres and planes, and then added self-collision using spatial hashing so that folded cloth would not pass through itself. In the shader part, I implemented diffuse shading, Blinn-Phong shading, texture mapping, bump mapping, displacement mapping, mirror reflection, and a custom textured shader with a bright Fresnel-style rin highlight. I also added an extra box collision primitive to show that the simulator can be extended beyond the original sphere and plane objects.
+</p>
+
+<p>
+  The main thing I learned from this project is how many small systems have to work together to make cloth look convincing. The mass-spring model gives the cloth its structure, Verlet integration gives it motion, collision constraints keep it outside objects, self-collision prevents folded layers from clipping through each other, and shaders control how the final surface looks. The final result is still a simplified physical model, but it already produces a wide range of cloth behaviors, from sagging pinned cloth to draping over spheres, folding onto itself, and resting on a custom box primitive.
+</p>
 		<h2>Part 1: Masses and springs</h2>
 
 		<p>
@@ -90,7 +100,7 @@
 
 		<p>
 		These three wireframe views make the different spring types easier to distinguish. Without shearing constraints, the cloth has a rectangular grid but less resistance to diagonal distortion. With only shearing constraints, the spring network is mostly diagonal and does not provide the usual horizontal and vertical support. With all constraints enabled, the cloth has the most complete local structure and is suitable for the simulation step in the next part.
-
+        </p>
 
 		<h2>Part 2: Simulation via numerical integration</h2>
 
@@ -660,7 +670,7 @@
 </p>
 
 <figure>
-  <img src="images/part5_custom_rin_cloth.png" alt="Custom texture and n shader on cloth" style="width:70%"/>
+  <img src="images/part5_custom_rin_cloth.png" alt="Custom texture and rin shader on cloth" style="width:70%"/>
   <figcaption>
     Final Custom shader on the cloth. The material preserves the custom texture and adds a bright cyan Fresnel-style rin highlight near the cloth boundary.
   </figcaption>
@@ -678,5 +688,45 @@
 </p>
 
 
-		<h2>(Optional) Part 6: Extra Credit - Additional cloth simulation features!</h2>
-	
+<h2>(Optional) Part 6: Extra Credit - Additional cloth simulation features!</h2>
+
+<h3>Additional 3D primitive: box collision</h3>
+
+<p>
+  For this extra credit feature, I added a new collision primitive: an axis-aligned box. The starter code already supported collision with spheres and planes, so I extended the same collision-object framework with a new <code>Box</code> class. The box is specified by a minimum corner, a maximum corner, and a friction value. I also updated the scene parser so that a JSON scene can contain a <code>box</code> entry, and I added <code>collision/box.cpp</code> to <code>src/CMakeLists.txt</code> so the new collision code is compiled and linked with the simulator.
+</p>
+
+<p>
+  The implementation follows the same overall style as the sphere and plane collision code. Each simulation step first computes a tentative new position for every point mass. The box collision code then checks whether the segment from <code>last_position</code> to the tentative <code>position</code> intersects the axis-aligned box. I used a slab-style intersection test: for each axis, the segment is compared with the minimum and maximum box planes, and the earliest valid entering time is kept. If the point mass crosses into the box during the time step, I compute the tangent point where the segment first touches the box surface, move it slightly outside that surface using a small offset, and then apply the correction from <code>last_position</code> scaled by <code>1 - friction</code>.
+</p>
+
+<p>
+  I also handled the case where a point mass is already inside the box. In that case, the point is moved toward the nearest box face and pushed just outside the box. This prevents point masses from getting trapped inside the primitive after a large time step or after spring corrections. The box is rendered as six faces made from twelve triangles, so it appears as an actual 3D obstacle in the scene rather than only as an invisible collider.
+</p>
+
+<div style="display: flex; flex-direction: column; align-items: center;">
+  <table style="width: 100%; text-align: center; border-collapse: collapse;">
+    <tr>
+      <td style="text-align: center;">
+        <img src="images/extra_box_before.png" width="400px"/>
+        <figcaption>
+          Box scene before the cloth falls. The blue box has been loaded from the JSON scene and rendered as a new 3D collision primitive.
+        </figcaption>
+      </td>
+      <td style="text-align: center;">
+        <img src="images/extra_box_after.png" width="400px"/>
+        <figcaption>
+          Box scene after the cloth falls. The cloth lands on the top face, then bends over the box edges and drapes down the sides instead of passing through the box.
+        </figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p>
+  The two screenshots show that both rendering and collision are working. In the first image, the cloth has not yet landed, so the box can be seen clearly as a separate primitive. In the second image, the cloth is supported by the box. The center region remains on top of the box, while the surrounding cloth falls around it. The folds are sharper than in the sphere case because the box has flat faces, hard edges, and corners. These sharp creases around the top boundary of the box match the geometry of the obstacle and show that the cloth is responding to the new primitive rather than simply colliding with a plane.
+</p>
+
+<p>
+  Overall, this extra feature demonstrates that the simulator can be extended beyond the default sphere and plane primitives. The new box object is parsed from the scene file, rendered in the viewer, and used in the collision loop through the same <code>CollisionObject</code> interface as the existing primitives.
+</p>
